@@ -1,0 +1,1052 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>體育課成績登記</title>
+<style>
+/* layout: top bar (class/unit context) -> tab nav -> one scrollable panel per tab -> footer data notice */
+:root{
+  --bg:#f6f5f0; --surface:#ffffff; --surface-2:#edefe6; --border:#d9d6c9;
+  --fg:#1f2320; --fg-muted:#5c6158; --accent:#1f6f54; --accent-fg:#ffffff;
+  --ok:#1f6f54; --ok-bg:#e3f1e9; --warn:#9a6300; --warn-bg:#fbeecb;
+  --danger:#a33b34; --danger-bg:#f7e4e1; --info:#2b5f8a; --info-bg:#e3eef5;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#141815; --surface:#1b211c; --surface-2:#232a24; --border:#333a32;
+    --fg:#edf1ea; --fg-muted:#9aa39a; --accent:#5ecf9d; --accent-fg:#0d1510;
+    --ok:#5ecf9d; --ok-bg:#163327; --warn:#e0a94a; --warn-bg:#3a2d10;
+    --danger:#e2847a; --danger-bg:#3a1e1c; --info:#7fb2dd; --info-bg:#18293a;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#141815; --surface:#1b211c; --surface-2:#232a24; --border:#333a32;
+  --fg:#edf1ea; --fg-muted:#9aa39a; --accent:#5ecf9d; --accent-fg:#0d1510;
+  --ok:#5ecf9d; --ok-bg:#163327; --warn:#e0a94a; --warn-bg:#3a2d10;
+  --danger:#e2847a; --danger-bg:#3a1e1c; --info:#7fb2dd; --info-bg:#18293a;
+  color-scheme: dark;
+}
+*{box-sizing:border-box}
+body{
+  margin:0;
+  background:var(--bg); color:var(--fg);
+  font-family:"Noto Sans TC","PingFang TC","Microsoft JhengHei",system-ui,sans-serif;
+  padding-left:max(16px,env(safe-area-inset-left,0px));
+  padding-right:max(16px,env(safe-area-inset-right,0px));
+  padding-block:16px 48px;
+  font-size:14px; line-height:1.5;
+}
+h1,h2,h3{font-weight:700; text-wrap:balance; margin:0}
+.app{max-width:1200px; margin:0 auto; display:flex; flex-direction:column; gap:14px}
+.tabular{font-variant-numeric:tabular-nums}
+
+/* top bar */
+.topbar{background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:14px 16px; display:flex; flex-direction:column; gap:10px}
+.topbar-row{display:flex; flex-wrap:wrap; gap:10px; align-items:center}
+.field{display:flex; flex-direction:column; gap:3px; min-width:0}
+.field label{font-size:11px; color:var(--fg-muted)}
+select,input[type=text],input[type=number],input[type=date]{
+  background:var(--surface); color:var(--fg); border:1px solid var(--border);
+  border-radius:6px; padding:6px 8px; font-size:13px; font-family:inherit;
+}
+select:focus,input:focus{outline:2px solid var(--accent); outline-offset:1px}
+button{
+  font-family:inherit; font-size:13px; border-radius:6px; border:1px solid var(--border);
+  background:var(--surface-2); color:var(--fg); padding:9px 14px; cursor:pointer; min-height:38px;
+}
+button:hover{border-color:var(--accent)}
+button:focus-visible{outline:2px solid var(--accent); outline-offset:1px}
+button.primary{background:var(--accent); color:var(--accent-fg); border-color:var(--accent); font-weight:500}
+button.ghost{background:transparent}
+button.danger{color:var(--danger); border-color:var(--danger)}
+button.small{padding:6px 10px; font-size:12px; min-height:32px}
+button:disabled{opacity:.45; cursor:not-allowed}
+.seg-group{display:flex; flex-wrap:wrap; gap:4px; max-width:220px}
+.seg-btn{padding:7px 10px; font-size:12px; border-radius:6px; border:1px solid var(--border); background:var(--surface-2); color:var(--fg); min-height:34px; cursor:pointer}
+.seg-btn.active{background:var(--accent); color:var(--accent-fg); border-color:var(--accent); font-weight:600}
+.seg-btn:hover{border-color:var(--accent)}
+.hint{color:var(--fg-muted); font-size:12px}
+.badge{display:inline-flex; align-items:center; gap:4px; border-radius:999px; padding:2px 9px; font-size:12px; font-weight:500; white-space:nowrap}
+.badge.ok{background:var(--ok-bg); color:var(--ok)}
+.badge.warn{background:var(--warn-bg); color:var(--warn)}
+.badge.danger{background:var(--danger-bg); color:var(--danger)}
+.badge.info{background:var(--info-bg); color:var(--info)}
+.badge.muted{background:var(--surface-2); color:var(--fg-muted)}
+
+/* tabs */
+.tabs{display:flex; gap:4px; border-bottom:1px solid var(--border)}
+.tab-btn{background:transparent; border:none; border-bottom:2px solid transparent; border-radius:0; padding:8px 4px; margin-right:14px; color:var(--fg-muted); font-weight:500}
+.tab-btn.active{color:var(--accent); border-bottom-color:var(--accent)}
+.tab-btn:hover{color:var(--fg)}
+.panel{display:none}
+.panel.active{display:block}
+.card{background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:16px}
+.card + .card{margin-top:12px}
+
+/* assessment settings */
+.item-row{display:grid; grid-template-columns:28px 1.4fr 110px 90px 1.6fr auto; gap:8px; align-items:center; padding:8px 0; border-bottom:1px solid var(--border)}
+.item-row:last-child{border-bottom:none}
+.item-row .order-btns{display:flex; flex-direction:column; gap:2px}
+.weight-warn{display:flex; align-items:center; gap:8px; margin-top:10px; padding:8px 10px; border-radius:8px}
+.config-inline{display:flex; flex-wrap:wrap; gap:6px; align-items:center; font-size:12px}
+.level-chip{display:flex; align-items:center; gap:4px; background:var(--surface-2); border:1px solid var(--border); border-radius:6px; padding:3px 6px}
+.level-chip input[type=text]{width:64px; padding:3px 5px; font-size:12px}
+.level-chip input[type=number]{width:48px; padding:3px 5px; font-size:12px}
+
+/* roster table */
+.toolbar{display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin-bottom:12px}
+.toolbar input[type=search]{min-width:160px}
+.filter-chip{border-radius:999px; padding:5px 12px; font-size:12px}
+.filter-chip.active{background:var(--accent); color:var(--accent-fg); border-color:var(--accent)}
+.table-wrap{overflow-x:auto; border:1px solid var(--border); border-radius:8px}
+table{border-collapse:collapse; width:100%; min-width:680px}
+th,td{padding:6px 8px; border-bottom:1px solid var(--border); text-align:left; white-space:nowrap; font-size:13px}
+thead th{background:var(--surface-2); position:sticky; top:0; font-weight:600; color:var(--fg-muted); font-size:12px}
+tbody tr:hover{background:var(--surface-2)}
+td.sticky-col,th.sticky-col{position:sticky; background:var(--surface); z-index:2}
+th.sticky-col{background:var(--surface-2)}
+td.col-seat,th.col-seat{left:0; min-width:44px}
+td.col-name,th.col-name{left:44px; min-width:76px; border-right:1px solid var(--border)}
+.cell-input{width:72px; padding:4px 6px; font-size:13px}
+.cell-input.bad{border-color:var(--danger); outline:1px solid var(--danger)}
+.raw-score{display:flex; flex-direction:column; gap:2px; align-items:flex-start}
+.raw-score .converted{font-size:11px; color:var(--fg-muted)}
+.note-input{width:120px; padding:4px 6px; font-size:12px}
+.weighted-total{font-weight:700}
+.row-actions button{padding:2px 6px; font-size:12px}
+
+/* stats */
+.stat-grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(130px,1fr)); gap:10px; margin-bottom:16px}
+.stat-tile{background:var(--surface-2); border:1px solid var(--border); border-radius:8px; padding:12px; display:flex; flex-direction:column; gap:4px}
+.stat-tile .num{font-size:26px; font-weight:700; font-family:inherit}
+.stat-tile .lbl{font-size:12px; color:var(--fg-muted)}
+.bar-row{display:grid; grid-template-columns:120px 1fr 48px; gap:10px; align-items:center; padding:6px 0}
+.bar-track{background:var(--surface-2); border-radius:4px; height:10px; overflow:hidden}
+.bar-fill{background:var(--accent); height:100%}
+.pending-list{display:flex; flex-wrap:wrap; gap:6px}
+
+/* modal */
+.modal-backdrop{position:fixed; inset:0; background:rgba(0,0,0,.4); display:flex; align-items:center; justify-content:center; padding:16px; z-index:50}
+.modal{background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:20px; max-width:420px; width:100%; display:flex; flex-direction:column; gap:12px}
+.modal h3{font-size:16px}
+.modal-actions{display:flex; justify-content:flex-end; gap:8px}
+.form-grid{display:grid; grid-template-columns:1fr 1fr; gap:10px}
+.form-grid .full{grid-column:1 / -1}
+
+footer.notice{background:var(--info-bg); color:var(--info); border-radius:8px; padding:10px 14px; font-size:12px; line-height:1.6}
+footer.notice b{font-weight:700}
+[hidden]{display:none!important}
+.toast{position:fixed; bottom:20px; left:50%; transform:translateX(-50%); background:var(--fg); color:var(--bg); padding:8px 16px; border-radius:8px; font-size:13px; z-index:60}
+</style>
+</head>
+<body>
+
+<div class="app">
+  <div class="topbar" id="topbar"></div>
+  <div class="tabs" id="tabs">
+    <button class="tab-btn active" data-tab="settings">評量設定</button>
+    <button class="tab-btn" data-tab="roster">學生登錄表</button>
+    <button class="tab-btn" data-tab="stats">班級統計</button>
+  </div>
+
+  <div class="panel active" id="panel-settings"></div>
+  <div class="panel" id="panel-roster"></div>
+  <div class="panel" id="panel-stats"></div>
+
+  <footer class="notice">
+    <b>資料保存說明:</b> 預設情況下,資料只存在您目前使用的瀏覽器裝置內(localStorage),清除瀏覽器資料、換裝置或換瀏覽器都會遺失。
+    按右上角「雲端同步」並填入您自己部署的 Google Apps Script 網址與金鑰後,可手動「上傳」把資料存到您的 Google Sheet,或「下載」取回雲端最新版本——這是<b>您主動按才會傳輸</b>,不會自動背景上傳。
+    未設定雲端同步前,資料不會離開這台裝置。此版本的金鑰保護屬於基本防護,不是正式校務系統等級的存取控制,學生成績仍屬敏感資料,請勿公開分享網址與金鑰。
+  </footer>
+</div>
+
+<div id="modal-root"></div>
+<div id="toast-root"></div>
+
+<script>
+(function(){
+"use strict";
+
+/* ---------- constants ---------- */
+var ATTEND = ['出席','缺席待補測','請假','免測','已補測'];
+var ATTEND_BADGE = {'出席':'muted','缺席待補測':'warn','請假':'info','免測':'info','已補測':'ok'};
+var MAX_STUDENTS = 25;
+var STORE_KEY = 'pe_grades_v1';
+
+var DEFAULT_ITEMS = [
+  {name:'技能表現(動作協調度)', type:'level', weight:30, config:{levels:[{label:'優良',score:95},{label:'達標',score:80},{label:'待加強',score:60}]}},
+  {name:'體能表現(立定跳遠,公分,越多越好)', type:'metric', weight:30, config:{unit:'公分', best:140, pass:90, direction:'high'}},
+  {name:'參與合作', type:'level', weight:20, config:{levels:[{label:'優良',score:95},{label:'達標',score:80},{label:'待加強',score:60}]}},
+  {name:'努力與進步', type:'level', weight:20, config:{levels:[{label:'優良',score:95},{label:'達標',score:80},{label:'待加強',score:60}]}}
+];
+
+/* ---------- state ---------- */
+var state = null;
+var lastSnapshot = null; // single-step undo
+var activeTab = 'settings';
+
+function uid(p){ return p + '_' + Math.random().toString(36).slice(2,9); }
+
+function defaultState(){
+  var classId = uid('cls');
+  var unitId = uid('unit');
+  var studentsSeed = [
+    ['01','王小明'],['02','陳小美'],['03','林大華'],['04','張美玲'],['05','李俊傑'],
+    ['06','黃淑芬'],['07','吳建宏'],['08','蔡雅婷']
+  ];
+  var students = studentsSeed.map(function(s){ return {id:uid('stu'), classId:classId, seat:s[0], name:s[1]}; });
+  var items = DEFAULT_ITEMS.map(function(it){ return Object.assign({id:uid('item'), order:0}, it); });
+  items.forEach(function(it,i){ it.order = i; });
+  var attendance = {}, notes = {}, records = {};
+  students.forEach(function(stu, idx){
+    var key = unitId+'|'+stu.id;
+    attendance[key] = idx === students.length-1 ? '缺席待補測' : '出席';
+  });
+  return {
+    classes:[{id:classId, year:'115', term:'1', grade:'一年級', cls:'1班', teacher:'範例教師'}],
+    units:[{id:unitId, classId:classId, name:'基本動作-立定跳遠', week:'第3週', items:items}],
+    students: students,
+    attendance: attendance,
+    notes: notes,
+    records: records,
+    activeClassId: classId,
+    activeUnitId: unitId
+  };
+}
+
+function load(){
+  try{
+    var raw = localStorage.getItem(STORE_KEY);
+    if(raw){ return JSON.parse(raw); }
+  }catch(e){}
+  return defaultState();
+}
+function save(){
+  try{ localStorage.setItem(STORE_KEY, JSON.stringify(state)); }catch(e){}
+}
+function snapshotBeforeChange(){
+  try{ lastSnapshot = JSON.parse(JSON.stringify(state)); }catch(e){ lastSnapshot = null; }
+  renderTopbar(); // refresh undo button enabled state after action completes too
+}
+
+/* ---------- helpers ---------- */
+function byId(arr,id){ return arr.find(function(x){ return x.id===id; }); }
+function activeClass(){ return byId(state.classes, state.activeClassId); }
+function activeUnit(){ return byId(state.units, state.activeUnitId); }
+function classStudents(classId){ return state.students.filter(function(s){ return s.classId===classId; }); }
+function unitsForClass(classId){ return state.units.filter(function(u){ return u.classId===classId; }); }
+function recKey(unitId,studentId,itemId){ return unitId+'|'+studentId+'|'+itemId; }
+function attKey(unitId,studentId){ return unitId+'|'+studentId; }
+
+function clamp(v,lo,hi){ return Math.max(lo, Math.min(hi, v)); }
+
+function computeScore(item, raw){
+  if(raw===undefined || raw===null || raw==='') return {score:null, bad:false, display:''};
+  if(item.type==='score'){
+    var n = Number(raw);
+    if(isNaN(n)) return {score:null, bad:true, display:''};
+    var lo = item.config.min!==undefined?item.config.min:0, hi = item.config.max!==undefined?item.config.max:100;
+    var bad = n<lo || n>hi;
+    return {score:n, bad:bad, display:n+''};
+  }
+  if(item.type==='level'){
+    var lv = (item.config.levels||[]).find(function(l){ return l.label===raw; });
+    if(!lv) return {score:null, bad:false, display:''};
+    return {score:lv.score, bad:false, display:lv.score+'分'};
+  }
+  if(item.type==='metric'){
+    var n2 = Number(raw);
+    if(isNaN(n2)) return {score:null, bad:true, display:''};
+    var best = item.config.best, pass = item.config.pass, dir = item.config.direction;
+    var s;
+    if(dir==='low'){
+      if(best===pass){ s = n2<=best?100:60; }
+      else{ s = 60 + (pass - n2) / (pass - best) * 40; }
+    } else {
+      if(best===pass){ s = n2>=best?100:60; }
+      else{ s = 60 + (n2 - pass) / (best - pass) * 40; }
+    }
+    s = clamp(Math.round(s), 0, 100);
+    return {score:s, bad:false, display:s+'分', outOfRange:false};
+  }
+  if(item.type==='done'){
+    var opt = (item.config.options||[]).find(function(o){ return o.label===raw; });
+    if(!opt) return {score:null, bad:false, display:''};
+    return {score:opt.score, bad:false, display:opt.score+'分'};
+  }
+  return {score:null, bad:false, display:''};
+}
+
+function studentUnitResult(unit, studentId){
+  var att = state.attendance[attKey(unit.id, studentId)] || '出席';
+  var items = unit.items;
+  var anyMissing = false, anyBad = false, weighted = 0, totalWeight = 0;
+  items.forEach(function(item){
+    var raw = state.records[recKey(unit.id, studentId, item.id)];
+    var r = computeScore(item, raw);
+    if(r.score===null){ anyMissing = true; }
+    else{
+      weighted += r.score * (item.weight/100);
+      totalWeight += item.weight/100;
+    }
+    if(r.bad) anyBad = true;
+  });
+  var normalAttendance = (att==='出席' || att==='已補測');
+  var status;
+  if(att==='缺席待補測') status = '待補測';
+  else if(att==='請假') status = '請假';
+  else if(att==='免測') status = '免測';
+  else status = anyMissing ? '待登錄' : '已完成';
+  var finalScore = (normalAttendance && !anyMissing) ? Math.round(weighted) : null;
+  return {att:att, status:status, finalScore:finalScore, anyBad:anyBad, countedInStats: status==='已完成'};
+}
+
+/* ---------- toast / modal ---------- */
+function toast(msg){
+  var root = document.getElementById('toast-root');
+  var el = document.createElement('div');
+  el.className = 'toast'; el.textContent = msg;
+  root.innerHTML=''; root.appendChild(el);
+  setTimeout(function(){ if(el.parentNode) el.parentNode.removeChild(el); }, 2200);
+}
+
+function showModal(opts){
+  // opts: {title, bodyHtml, onMount(container), actions:[{label,primary,danger,onClick}]}
+  var root = document.getElementById('modal-root');
+  root.innerHTML='';
+  var backdrop = document.createElement('div');
+  backdrop.className = 'modal-backdrop';
+  var modal = document.createElement('div');
+  modal.className = 'modal';
+  var h = document.createElement('h3'); h.textContent = opts.title;
+  modal.appendChild(h);
+  var body = document.createElement('div');
+  body.innerHTML = opts.bodyHtml || '';
+  modal.appendChild(body);
+  var actions = document.createElement('div');
+  actions.className = 'modal-actions';
+  (opts.actions||[]).forEach(function(a){
+    var b = document.createElement('button');
+    b.textContent = a.label;
+    if(a.primary) b.className='primary';
+    if(a.danger) b.className='danger';
+    b.onclick = function(){
+      if(a.onClick) a.onClick(body, closeModal);
+      else closeModal();
+    };
+    actions.appendChild(b);
+  });
+  modal.appendChild(actions);
+  backdrop.appendChild(modal);
+  backdrop.addEventListener('click', function(e){ if(e.target===backdrop) closeModal(); });
+  root.appendChild(backdrop);
+  if(opts.onMount) opts.onMount(body);
+}
+function closeModal(){ document.getElementById('modal-root').innerHTML=''; }
+
+function confirmDanger(message, onConfirm){
+  showModal({
+    title:'請確認',
+    bodyHtml:'<p style="margin:0;color:var(--fg-muted)">'+message+'</p>',
+    actions:[
+      {label:'取消'},
+      {label:'確定刪除', danger:true, onClick:function(_, close){ onConfirm(); close(); }}
+    ]
+  });
+}
+
+/* ---------- top bar ---------- */
+function renderTopbar(){
+  var el = document.getElementById('topbar');
+  var cls = activeClass();
+  var unit = activeUnit();
+  var classOpts = state.classes.map(function(c){
+    return '<option value="'+c.id+'"'+(c.id===state.activeClassId?' selected':'')+'>'+
+      c.year+'學年度 '+c.term+' '+c.grade+c.cls+'</option>';
+  }).join('');
+  var unitList = unitsForClass(state.activeClassId);
+  var unitOpts = unitList.map(function(u){
+    return '<option value="'+u.id+'"'+(u.id===state.activeUnitId?' selected':'')+'>'+u.name+'('+u.week+')</option>';
+  }).join('');
+
+  el.innerHTML =
+    '<div class="topbar-row">'+
+      '<div class="field"><label>班級</label><select id="sel-class">'+classOpts+'</select></div>'+
+      '<div class="field"><label>單元</label><select id="sel-unit">'+unitOpts+'</select></div>'+
+      '<button class="small" id="btn-new-class">新增班級</button>'+
+      '<button class="small" id="btn-new-unit">新增單元</button>'+
+      '<div style="flex:1"></div>'+
+      '<button class="small ghost" id="btn-undo" '+(lastSnapshot?'':'disabled')+'>復原上一步</button>'+
+      '<button class="small ghost danger" id="btn-reset">重置範例資料</button>'+
+      '<button class="small" id="btn-cloud">雲端同步</button>'+
+    '</div>'+
+    '<div class="topbar-row hint">'+
+      (cls ? ('任課教師:'+escapeHtml(cls.teacher)+' ・ 學生人數上限 '+MAX_STUDENTS+' 人') : '尚未建立班級') +
+      (unit ? (' ・ 目前單元:'+escapeHtml(unit.name)) : '') +
+    '</div>';
+
+  document.getElementById('sel-class').onchange = function(e){
+    state.activeClassId = e.target.value;
+    var us = unitsForClass(state.activeClassId);
+    state.activeUnitId = us.length ? us[0].id : null;
+    save(); renderAll();
+  };
+  document.getElementById('sel-unit').onchange = function(e){
+    state.activeUnitId = e.target.value; save(); renderAll();
+  };
+  document.getElementById('btn-new-class').onclick = openNewClassModal;
+  document.getElementById('btn-new-unit').onclick = openNewUnitModal;
+  document.getElementById('btn-undo').onclick = function(){
+    if(!lastSnapshot) return;
+    state = lastSnapshot; lastSnapshot = null; save(); renderAll();
+    toast('已復原上一步操作');
+  };
+  document.getElementById('btn-reset').onclick = function(){
+    confirmDanger('這會清除目前所有班級、單元與登錄資料,換回內建的示範資料,確定要重置嗎?', function(){
+      state = defaultState(); lastSnapshot = null; save(); renderAll();
+      toast('已重置為示範資料');
+    });
+  };
+  document.getElementById('btn-cloud').onclick = openCloudSyncModal;
+}
+
+/* ---------- 雲端同步(Google Apps Script) ---------- */
+var CLOUD_KEY = 'pe_grades_cloud_cfg_v1';
+function loadCloudCfg(){
+  try{ var raw = localStorage.getItem(CLOUD_KEY); if(raw) return JSON.parse(raw); }catch(e){}
+  return {url:'', key:''};
+}
+function saveCloudCfg(cfg){ try{ localStorage.setItem(CLOUD_KEY, JSON.stringify(cfg)); }catch(e){} }
+
+function openCloudSyncModal(){
+  var cfg = loadCloudCfg();
+  showModal({
+    title:'雲端同步(Google Apps Script)',
+    bodyHtml:
+      '<p class="hint" style="margin:0">需要先依照 README 在 Google Apps Script 部署好 Web App,並設定 API 金鑰。此功能為選用,不設定也能單機使用。</p>'+
+      '<div class="form-grid">'+
+      '<div class="field full"><label>Apps Script 網址(/exec)</label><input type="text" id="f-cloud-url" value="'+escapeHtml(cfg.url)+'" placeholder="https://script.google.com/macros/s/.../exec"></div>'+
+      '<div class="field full"><label>API 金鑰</label><input type="text" id="f-cloud-key" value="'+escapeHtml(cfg.key)+'"></div>'+
+      '</div>'+
+      '<p id="cloud-status" class="hint" style="margin:0"></p>',
+    actions:[
+      {label:'關閉'},
+      {label:'⬇ 從雲端下載', onClick:function(body){
+        persistCloudCfg(body);
+        cloudDownload(body);
+      }},
+      {label:'⬆ 上傳目前資料', primary:true, onClick:function(body){
+        persistCloudCfg(body);
+        cloudUpload(body);
+      }}
+    ]
+  });
+}
+function persistCloudCfg(body){
+  var url = body.querySelector('#f-cloud-url').value.trim();
+  var key = body.querySelector('#f-cloud-key').value.trim();
+  saveCloudCfg({url:url, key:key});
+}
+function setCloudStatus(body, msg){
+  var el = body.querySelector('#cloud-status');
+  if(el) el.textContent = msg;
+}
+function cloudUpload(body){
+  var cfg = loadCloudCfg();
+  if(!cfg.url || !cfg.key){ setCloudStatus(body,'請先填寫網址與金鑰'); return; }
+  setCloudStatus(body, '上傳中…');
+  fetch(cfg.url, {
+    method:'POST',
+    body: JSON.stringify({key:cfg.key, state:state})
+  }).then(function(r){ return r.json(); }).then(function(data){
+    if(data.ok){ setCloudStatus(body, '已上傳,Google Sheet 已更新('+(data.updatedAt||'')+')'); toast('已同步到 Google Sheet'); }
+    else{ setCloudStatus(body, '上傳失敗:'+(data.error||'未知錯誤')); }
+  }).catch(function(err){ setCloudStatus(body, '連線失敗,請確認網址與部署權限:'+err); });
+}
+function cloudDownload(body){
+  var cfg = loadCloudCfg();
+  if(!cfg.url || !cfg.key){ setCloudStatus(body,'請先填寫網址與金鑰'); return; }
+  setCloudStatus(body, '下載中…');
+  fetch(cfg.url + '?key=' + encodeURIComponent(cfg.key) + '&action=load')
+    .then(function(r){ return r.json(); })
+    .then(function(data){
+      if(!data.ok){ setCloudStatus(body, '下載失敗:'+(data.error||'未知錯誤')); return; }
+      if(!data.state || !data.state.classes || !data.state.classes.length){
+        setCloudStatus(body, '雲端目前沒有資料,請先從本機上傳一次。'); return;
+      }
+      setCloudStatus(body, '已取得雲端資料,請確認是否覆蓋本機。');
+      confirmDanger('這會用雲端資料覆蓋目前裝置上的資料,確定要下載嗎?', function(){
+        snapshotBeforeChange();
+        state = data.state;
+        if(!state.activeUnitId && state.units.length) state.activeUnitId = state.units[0].id;
+        if(!state.activeClassId && state.classes.length) state.activeClassId = state.classes[0].id;
+        save(); renderAll();
+        toast('已套用雲端資料');
+      });
+    }).catch(function(err){ setCloudStatus(body, '連線失敗,請確認網址與部署權限:'+err); });
+}
+
+function escapeHtml(s){
+  return String(s==null?'':s).replace(/[&<>"']/g, function(c){
+    return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
+  });
+}
+
+function openNewClassModal(){
+  showModal({
+    title:'新增班級',
+    bodyHtml:
+      '<div class="form-grid">'+
+      '<div class="field"><label>學年度</label><input type="text" id="f-year" value="115"></div>'+
+      '<div class="field"><label>學期</label><select id="f-term"><option value="1">第一學期</option><option value="2">第二學期</option></select></div>'+
+      '<div class="field"><label>年級</label><input type="text" id="f-grade" value="一年級"></div>'+
+      '<div class="field"><label>班級</label><input type="text" id="f-cls" value="1班"></div>'+
+      '<div class="field full"><label>任課教師</label><input type="text" id="f-teacher" placeholder="教師姓名"></div>'+
+      '</div>',
+    actions:[
+      {label:'取消'},
+      {label:'建立班級', primary:true, onClick:function(body, close){
+        snapshotBeforeChange();
+        var id = uid('cls');
+        state.classes.push({
+          id:id,
+          year: body.querySelector('#f-year').value.trim()||'115',
+          term: body.querySelector('#f-term').value,
+          grade: body.querySelector('#f-grade').value.trim()||'一年級',
+          cls: body.querySelector('#f-cls').value.trim()||'1班',
+          teacher: body.querySelector('#f-teacher').value.trim()||'未填寫'
+        });
+        state.activeClassId = id;
+        state.activeUnitId = null;
+        save(); close(); renderAll();
+        toast('已建立新班級,請先新增學生與單元');
+      }}
+    ]
+  });
+}
+
+function openNewUnitModal(){
+  if(!state.activeClassId){ toast('請先建立班級'); return; }
+  showModal({
+    title:'新增單元',
+    bodyHtml:
+      '<div class="form-grid">'+
+      '<div class="field full"><label>單元名稱</label><input type="text" id="f-uname" placeholder="例如:籃球-定點投籃"></div>'+
+      '<div class="field full"><label>評量週次 / 日期</label><input type="text" id="f-uweek" placeholder="例如:第10週 或 2026/10/20"></div>'+
+      '</div><p class="hint" style="margin:0">會先帶入「技能表現、體能表現、參與合作、努力與進步」四個評量項目範例,您可在「評量設定」頁自由修改、刪除或新增。</p>',
+    actions:[
+      {label:'取消'},
+      {label:'建立單元', primary:true, onClick:function(body, close){
+        var name = body.querySelector('#f-uname').value.trim();
+        if(!name){ toast('請輸入單元名稱'); return; }
+        snapshotBeforeChange();
+        var id = uid('unit');
+        var items = DEFAULT_ITEMS.map(function(it,i){ return Object.assign({id:uid('item'), order:i}, JSON.parse(JSON.stringify(it))); });
+        state.units.push({
+          id:id, classId:state.activeClassId,
+          name:name, week: body.querySelector('#f-uweek').value.trim()||'未填寫',
+          items:items
+        });
+        state.activeUnitId = id;
+        save(); close(); renderAll();
+        toast('已建立新單元');
+      }}
+    ]
+  });
+}
+
+/* ---------- tabs ---------- */
+function renderTabs(){
+  var btns = document.querySelectorAll('.tab-btn');
+  btns.forEach(function(b){
+    b.classList.toggle('active', b.dataset.tab===activeTab);
+    b.onclick = function(){ activeTab = b.dataset.tab; renderTabs(); renderPanels(); };
+  });
+  ['settings','roster','stats'].forEach(function(t){
+    document.getElementById('panel-'+t).classList.toggle('active', t===activeTab);
+  });
+}
+function renderPanels(){
+  renderTabs();
+  var unit = activeUnit();
+  if(!unit){
+    ['settings','roster','stats'].forEach(function(t){
+      document.getElementById('panel-'+t).innerHTML = '<div class="card hint">請先在上方建立班級與單元。</div>';
+    });
+    return;
+  }
+  renderSettingsPanel(unit);
+  renderRosterPanel(unit);
+  renderStatsPanel(unit);
+}
+
+/* ---------- settings panel ---------- */
+function typeLabel(t){ return {score:'分數(0-100)', level:'等級', metric:'數據', done:'完成狀態'}[t]; }
+
+function renderSettingsPanel(unit){
+  var el = document.getElementById('panel-settings');
+  var items = unit.items.slice().sort(function(a,b){ return a.order-b.order; });
+  var totalWeight = items.reduce(function(s,it){ return s+Number(it.weight||0); }, 0);
+
+  var rows = items.map(function(item, idx){
+    return '<div class="item-row" data-item="'+item.id+'">'+
+      '<div class="order-btns">'+
+        '<button class="small ghost" data-act="up" '+(idx===0?'disabled':'')+' title="上移">▲</button>'+
+        '<button class="small ghost" data-act="down" '+(idx===items.length-1?'disabled':'')+' title="下移">▼</button>'+
+      '</div>'+
+      '<input type="text" class="it-name" value="'+escapeHtml(item.name)+'">'+
+      '<select class="it-type">'+['score','level','metric','done'].map(function(t){
+        return '<option value="'+t+'"'+(t===item.type?' selected':'')+'>'+typeLabel(t)+'</option>';
+      }).join('')+'</select>'+
+      '<input type="number" class="it-weight" value="'+item.weight+'" min="0" max="100" step="1"> %'+
+      '<div class="config-inline" data-config></div>'+
+      '<div class="row-actions"><button class="small danger" data-act="del">刪除</button></div>'+
+    '</div>';
+  }).join('');
+
+  el.innerHTML =
+    '<div class="card">'+
+      '<h2 style="font-size:15px;margin-bottom:10px">評量項目設定・'+escapeHtml(unit.name)+'</h2>'+
+      '<div class="item-row" style="font-size:11px;color:var(--fg-muted);border-bottom:2px solid var(--border);font-weight:600">'+
+        '<div></div><div>項目名稱</div><div>評量方式</div><div>配分</div><div>方式設定</div><div></div></div>'+
+      rows+
+      '<div style="margin-top:10px"><button id="btn-add-item">+ 新增評量項目</button></div>'+
+      (totalWeight===100
+        ? '<div class="weight-warn" style="background:var(--ok-bg);color:var(--ok)">配分合計 '+totalWeight+'%,加總正確 ✓</div>'
+        : '<div class="weight-warn" style="background:var(--warn-bg);color:var(--warn)">⚠ 配分合計為 '+totalWeight+'%,與 100% 不符,請確認是否為刻意設計</div>'
+      )+
+    '</div>';
+
+  items.forEach(function(item){
+    var row = el.querySelector('.item-row[data-item="'+item.id+'"]');
+    renderItemConfig(row.querySelector('[data-config]'), item);
+
+    row.querySelector('.it-name').onchange = function(e){
+      snapshotBeforeChange(); item.name = e.target.value; save(); renderPanels();
+    };
+    row.querySelector('.it-type').onchange = function(e){
+      snapshotBeforeChange();
+      item.type = e.target.value;
+      item.config = defaultConfigFor(item.type);
+      save(); renderPanels();
+    };
+    row.querySelector('.it-weight').onchange = function(e){
+      snapshotBeforeChange(); item.weight = Number(e.target.value)||0; save(); renderPanels();
+    };
+    row.querySelector('[data-act="up"]').onclick = function(){
+      snapshotBeforeChange(); swapOrder(items, item, -1); save(); renderPanels();
+    };
+    row.querySelector('[data-act="down"]').onclick = function(){
+      snapshotBeforeChange(); swapOrder(items, item, 1); save(); renderPanels();
+    };
+    row.querySelector('[data-act="del"]').onclick = function(){
+      confirmDanger('刪除評量項目「'+escapeHtml(item.name)+'」後,該項目的所有登錄資料也會移除,確定要刪除嗎?', function(){
+        snapshotBeforeChange();
+        unit.items = unit.items.filter(function(i){ return i.id!==item.id; });
+        save(); renderPanels();
+      });
+    };
+  });
+
+  document.getElementById('btn-add-item').onclick = function(){
+    snapshotBeforeChange();
+    unit.items.push({id:uid('item'), name:'新評量項目', type:'score', weight:0, order:unit.items.length, config:defaultConfigFor('score')});
+    save(); renderPanels();
+  };
+}
+
+function defaultConfigFor(type){
+  if(type==='score') return {min:0, max:100};
+  if(type==='level') return {levels:[{label:'優良',score:95},{label:'達標',score:80},{label:'待加強',score:60}]};
+  if(type==='metric') return {unit:'秒', best:12, pass:20, direction:'low'};
+  if(type==='done') return {options:[{label:'已完成',score:100},{label:'尚未完成',score:60}]};
+  return {};
+}
+
+function swapOrder(items, item, dir){
+  var sorted = items.slice().sort(function(a,b){ return a.order-b.order; });
+  var idx = sorted.indexOf(item);
+  var j = idx+dir;
+  if(j<0 || j>=sorted.length) return;
+  var tmp = sorted[j].order; sorted[j].order = sorted[idx].order; sorted[idx].order = tmp;
+}
+
+function renderItemConfig(container, item){
+  if(item.type==='score'){
+    container.innerHTML =
+      '最低 <input type="number" class="cfg-min" value="'+item.config.min+'" style="width:56px">'+
+      ' 最高 <input type="number" class="cfg-max" value="'+item.config.max+'" style="width:56px">';
+    container.querySelector('.cfg-min').onchange = function(e){ snapshotBeforeChange(); item.config.min=Number(e.target.value); save(); };
+    container.querySelector('.cfg-max').onchange = function(e){ snapshotBeforeChange(); item.config.max=Number(e.target.value); save(); };
+  } else if(item.type==='level' || item.type==='done'){
+    var list = item.type==='level' ? item.config.levels : item.config.options;
+    var chips = list.map(function(lv, i){
+      return '<span class="level-chip" data-i="'+i+'">'+
+        '<input type="text" class="lv-label" value="'+escapeHtml(lv.label)+'">'+
+        '<input type="number" class="lv-score" value="'+lv.score+'">分'+
+        '<button class="small ghost" data-rm style="padding:0 4px">×</button></span>';
+    }).join('');
+    container.innerHTML = chips + '<button class="small ghost" data-add>+ 新增選項</button>';
+    container.querySelectorAll('.level-chip').forEach(function(chip){
+      var i = Number(chip.dataset.i);
+      chip.querySelector('.lv-label').onchange = function(e){ snapshotBeforeChange(); list[i].label=e.target.value; save(); };
+      chip.querySelector('.lv-score').onchange = function(e){ snapshotBeforeChange(); list[i].score=Number(e.target.value); save(); };
+      chip.querySelector('[data-rm]').onclick = function(){ snapshotBeforeChange(); list.splice(i,1); save(); renderPanels(); };
+    });
+    container.querySelector('[data-add]').onclick = function(){
+      snapshotBeforeChange(); list.push({label:'新選項', score:70}); save(); renderPanels();
+    };
+  } else if(item.type==='metric'){
+    container.innerHTML =
+      '單位 <input type="text" class="cfg-unit" value="'+escapeHtml(item.config.unit)+'" style="width:44px">'+
+      ' 滿分值 <input type="number" class="cfg-best" value="'+item.config.best+'" style="width:56px">'+
+      ' 及格值 <input type="number" class="cfg-pass" value="'+item.config.pass+'" style="width:56px">'+
+      ' <select class="cfg-dir"><option value="low"'+(item.config.direction==='low'?' selected':'')+'>數值越低越好</option>'+
+      '<option value="high"'+(item.config.direction==='high'?' selected':'')+'>數值越高越好</option></select>';
+    container.querySelector('.cfg-unit').onchange = function(e){ snapshotBeforeChange(); item.config.unit=e.target.value; save(); };
+    container.querySelector('.cfg-best').onchange = function(e){ snapshotBeforeChange(); item.config.best=Number(e.target.value); save(); };
+    container.querySelector('.cfg-pass').onchange = function(e){ snapshotBeforeChange(); item.config.pass=Number(e.target.value); save(); };
+    container.querySelector('.cfg-dir').onchange = function(e){ snapshotBeforeChange(); item.config.direction=e.target.value; save(); };
+  }
+}
+
+/* ---------- roster panel ---------- */
+var rosterFilter = 'all';
+var rosterSearch = '';
+
+function renderRosterPanel(unit){
+  var el = document.getElementById('panel-roster');
+  var students = classStudents(unit.classId).slice().sort(function(a,b){ return (a.seat||'').localeCompare(b.seat||''); });
+
+  var filtered = students.filter(function(stu){
+    var r = studentUnitResult(unit, stu.id);
+    if(rosterSearch){
+      var q = rosterSearch.trim();
+      if(stu.name.indexOf(q)===-1 && stu.seat.indexOf(q)===-1) return false;
+    }
+    if(rosterFilter==='all') return true;
+    if(rosterFilter==='pending') return r.status==='待登錄';
+    if(rosterFilter==='retest') return r.status==='待補測';
+    if(rosterFilter==='done') return r.status==='已完成';
+    return true;
+  });
+
+  var items = unit.items.slice().sort(function(a,b){ return a.order-b.order; });
+
+  var head = '<tr>'+
+    '<th class="sticky-col col-seat">座號</th>'+
+    '<th class="sticky-col col-name">姓名</th>'+
+    '<th>出席狀態</th>'+
+    items.map(function(it){ return '<th>'+escapeHtml(it.name)+'<br><span class="hint">('+typeLabel(it.type)+' ・ '+it.weight+'%)</span></th>'; }).join('')+
+    '<th>加權成績</th><th>狀態</th><th>教師備註</th><th></th>'+
+  '</tr>';
+
+  var rows = filtered.map(function(stu){
+    var r = studentUnitResult(unit, stu.id);
+    var att = r.att;
+    var attOpts = ATTEND.map(function(a){ return '<option value="'+a+'"'+(a===att?' selected':'')+'>'+a+'</option>'; }).join('');
+    var cells = items.map(function(item){
+      return '<td>'+cellInputHtml(unit, stu, item)+'</td>';
+    }).join('');
+    return '<tr data-stu="'+stu.id+'">'+
+      '<td class="sticky-col col-seat tabular">'+escapeHtml(stu.seat)+'</td>'+
+      '<td class="sticky-col col-name">'+escapeHtml(stu.name)+'</td>'+
+      '<td><select class="att-sel" data-stu="'+stu.id+'">'+attOpts+'</select></td>'+
+      cells+
+      '<td class="weighted-total tabular">'+(r.finalScore===null?'—':r.finalScore)+'</td>'+
+      '<td><span class="badge '+(ATTEND_BADGE[att] && r.status!=='已完成' && r.status!=='待登錄' ? ATTEND_BADGE[att] : (r.status==='已完成'?'ok':r.status==='待登錄'?'warn':'muted'))+'">'+r.status+'</span></td>'+
+      '<td><input type="text" class="note-input" data-stu="'+stu.id+'" value="'+escapeHtml(state.notes[attKey(unit.id,stu.id)]||'')+'" placeholder="備註"></td>'+
+      '<td class="row-actions"><button class="small danger" data-act="del-stu" data-stu="'+stu.id+'">刪除</button></td>'+
+    '</tr>';
+  }).join('');
+
+  var pendingCount = students.filter(function(s){ return studentUnitResult(unit,s.id).status==='待登錄'; }).length;
+  var retestCount = students.filter(function(s){ return studentUnitResult(unit,s.id).status==='待補測'; }).length;
+  var doneCount = students.filter(function(s){ return studentUnitResult(unit,s.id).status==='已完成'; }).length;
+
+  el.innerHTML =
+    '<div class="card">'+
+      '<div class="toolbar">'+
+        '<input type="search" id="roster-search" placeholder="搜尋姓名或座號" value="'+escapeHtml(rosterSearch)+'">'+
+        '<button class="filter-chip'+(rosterFilter==='all'?' active':'')+'" data-f="all">全部('+students.length+')</button>'+
+        '<button class="filter-chip'+(rosterFilter==='pending'?' active':'')+'" data-f="pending">待登錄('+pendingCount+')</button>'+
+        '<button class="filter-chip'+(rosterFilter==='retest'?' active':'')+'" data-f="retest">待補測('+retestCount+')</button>'+
+        '<button class="filter-chip'+(rosterFilter==='done'?' active':'')+'" data-f="done">已完成('+doneCount+')</button>'+
+        '<div style="flex:1"></div>'+
+        '<button id="btn-add-student" '+(students.length>=MAX_STUDENTS?'disabled':'')+'>+ 新增學生</button>'+
+        '<button id="btn-export-csv">匯出 CSV</button>'+
+      '</div>'+
+      (students.length>=MAX_STUDENTS ? '<p class="hint" style="margin:0 0 8px">已達班級人數上限 '+MAX_STUDENTS+' 人</p>' : '')+
+      '<div class="table-wrap"><table><thead>'+head+'</thead><tbody>'+rows+'</tbody></table></div>'+
+      (filtered.length===0 ? '<p class="hint" style="margin-top:10px">沒有符合篩選條件的學生。</p>' : '')+
+    '</div>';
+
+  document.getElementById('roster-search').oninput = function(e){
+    rosterSearch = e.target.value;
+    var pos = e.target.selectionStart;
+    renderRosterPanel(unit);
+    var again = document.getElementById('roster-search');
+    if(again){ again.focus(); try{ again.setSelectionRange(pos,pos); }catch(err){} }
+  };
+  el.querySelectorAll('.filter-chip').forEach(function(b){
+    b.onclick = function(){ rosterFilter = b.dataset.f; renderRosterPanel(unit); };
+  });
+  document.getElementById('btn-add-student').onclick = function(){ openAddStudentModal(unit); };
+  document.getElementById('btn-export-csv').onclick = function(){ exportCsv(unit, students); };
+
+  el.querySelectorAll('.att-sel').forEach(function(sel){
+    sel.onchange = function(){
+      snapshotBeforeChange();
+      state.attendance[attKey(unit.id, sel.dataset.stu)] = sel.value;
+      save(); renderAll();
+    };
+  });
+  el.querySelectorAll('.note-input').forEach(function(inp){
+    inp.onchange = function(){
+      state.notes[attKey(unit.id, inp.dataset.stu)] = inp.value;
+      save();
+    };
+  });
+  el.querySelectorAll('[data-act="del-stu"]').forEach(function(btn){
+    btn.onclick = function(){
+      var stu = byId(state.students, btn.dataset.stu);
+      confirmDanger('刪除學生「'+escapeHtml(stu.name)+'」會移除其在所有單元的登錄資料,確定要刪除嗎?', function(){
+        snapshotBeforeChange();
+        state.students = state.students.filter(function(s){ return s.id!==stu.id; });
+        save(); renderAll();
+      });
+    };
+  });
+
+  bindCellInputs(el, unit, items);
+}
+
+function cellInputHtml(unit, stu, item){
+  var raw = state.records[recKey(unit.id, stu.id, item.id)];
+  var r = computeScore(item, raw);
+  var badClass = r.bad ? ' bad' : '';
+  if(item.type==='score'){
+    return '<input type="number" class="cell-input'+badClass+'" data-item="'+item.id+'" data-stu="'+stu.id+'" value="'+(raw==null?'':raw)+'" title="'+(r.bad?'超出範圍 '+item.config.min+'-'+item.config.max:'')+'">';
+  }
+  if(item.type==='level' || item.type==='done'){
+    var list = item.type==='level' ? item.config.levels : item.config.options;
+    var btns = list.map(function(l){
+      var active = l.label===raw;
+      return '<button type="button" class="seg-btn'+(active?' active':'')+'" data-item="'+item.id+'" data-stu="'+stu.id+'" data-val="'+escapeHtml(l.label)+'">'+escapeHtml(l.label)+'</button>';
+    }).join('');
+    return '<div class="seg-group">'+btns+'</div>'+
+      (r.score!==null?'<div class="converted">'+r.display+'</div>':'');
+  }
+  if(item.type==='metric'){
+    return '<input type="number" class="cell-input'+badClass+'" data-item="'+item.id+'" data-stu="'+stu.id+'" value="'+(raw==null?'':raw)+'" placeholder="'+escapeHtml(item.config.unit)+'">'+
+      (r.score!==null?'<div class="converted">'+r.display+'</div>':'');
+  }
+  return '';
+}
+
+function bindCellInputs(el, unit, items){
+  var inputs = Array.prototype.slice.call(el.querySelectorAll('.cell-input'));
+  inputs.forEach(function(inp){
+    var commit = function(){
+      snapshotBeforeChange();
+      state.records[recKey(unit.id, inp.dataset.stu, inp.dataset.item)] = inp.value;
+      save(); renderRosterPanel(unit); renderStatsPanel(unit);
+    };
+    inp.addEventListener('change', commit);
+    inp.addEventListener('keydown', function(e){
+      if(e.key==='Enter'){ e.preventDefault(); inp.blur(); moveFocus(inp, 1); }
+      if(e.key==='ArrowDown'){ e.preventDefault(); moveFocus(inp, 1); }
+      if(e.key==='ArrowUp'){ e.preventDefault(); moveFocus(inp, -1); }
+    });
+  });
+  function moveFocus(current, dir){
+    var itemId = current.dataset.item;
+    var col = inputs.filter(function(i){ return i.dataset.item===itemId; });
+    var idx = col.indexOf(current);
+    var next = col[idx+dir];
+    if(next) next.focus();
+  }
+
+  // 等級/完成狀態:一鍵式按鈕,單次點擊直接登錄,現場操作更快
+  el.querySelectorAll('.seg-btn').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      snapshotBeforeChange();
+      var key = recKey(unit.id, btn.dataset.stu, btn.dataset.item);
+      var same = state.records[key] === btn.dataset.val;
+      state.records[key] = same ? '' : btn.dataset.val; // 再點一次可取消選擇
+      save(); renderRosterPanel(unit); renderStatsPanel(unit);
+    });
+  });
+}
+
+function openAddStudentModal(unit){
+  showModal({
+    title:'新增學生',
+    bodyHtml:
+      '<div class="form-grid">'+
+      '<div class="field"><label>座號</label><input type="text" id="f-seat"></div>'+
+      '<div class="field"><label>姓名</label><input type="text" id="f-name"></div>'+
+      '</div><p class="hint" style="margin:0">提醒:請使用虛構示範資料,勿輸入真實學生個資於此原型中。</p>',
+    actions:[
+      {label:'取消'},
+      {label:'新增', primary:true, onClick:function(body, close){
+        var seat = body.querySelector('#f-seat').value.trim();
+        var name = body.querySelector('#f-name').value.trim();
+        if(!seat || !name){ toast('請輸入座號與姓名'); return; }
+        if(classStudents(unit.classId).length>=MAX_STUDENTS){ toast('已達人數上限'); return; }
+        snapshotBeforeChange();
+        state.students.push({id:uid('stu'), classId:unit.classId, seat:seat, name:name});
+        save(); close(); renderAll();
+      }}
+    ]
+  });
+}
+
+function exportCsv(unit, students){
+  var items = unit.items.slice().sort(function(a,b){ return a.order-b.order; });
+  var header = ['座號','姓名','出席狀態'].concat(items.map(function(i){ return i.name+'(原始數據)'; }))
+    .concat(items.map(function(i){ return i.name+'(換算成績)'; }))
+    .concat(['加權成績','狀態','教師備註']);
+  var lines = [header.join(',')];
+  students.forEach(function(stu){
+    var r = studentUnitResult(unit, stu.id);
+    var rawVals = items.map(function(it){ return csvEscape(state.records[recKey(unit.id, stu.id, it.id)]||''); });
+    var scoreVals = items.map(function(it){
+      var raw = state.records[recKey(unit.id, stu.id, it.id)];
+      var c = computeScore(it, raw);
+      return c.score===null?'':c.score;
+    });
+    var note = state.notes[attKey(unit.id, stu.id)]||'';
+    var row = [stu.seat, stu.name, r.att].concat(rawVals).concat(scoreVals)
+      .concat([r.finalScore===null?'':r.finalScore, r.status, csvEscape(note)]);
+    lines.push(row.join(','));
+  });
+  var csv = '﻿' + lines.join('\r\n');
+  triggerCsvDownload(csv, unit.name+'_成績.csv');
+}
+function csvEscape(v){
+  v = String(v);
+  if(/[",\n]/.test(v)) return '"'+v.replace(/"/g,'""')+'"';
+  return v;
+}
+
+function triggerCsvDownload(csvText, filename){
+  if(window.claude && window.claude.use){
+    // 在 claude.ai Artifact 預覽環境中,一般網頁下載會被封鎖,改用 downloads 能力
+    window.claude.use('downloads').then(function(downloads){
+      if(!downloads){ toast('此環境不支援直接下載,請改用「複製 CSV 文字」'); showCsvFallback(csvText); return; }
+      var bytes = new TextEncoder().encode(csvText);
+      downloads.save({filename:filename, data:bytes}).then(function(){
+        toast('已請求下載:'+filename);
+      }).catch(function(){
+        toast('下載已取消或失敗'); showCsvFallback(csvText);
+      });
+    }).catch(function(){ showCsvFallback(csvText); });
+    return;
+  }
+  // 正式網站(GitHub Pages 等)環境:用一般瀏覽器下載
+  try{
+    var blob = new Blob([csvText], {type:'text/csv;charset=utf-8;'});
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url; a.download = filename;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    setTimeout(function(){ URL.revokeObjectURL(url); }, 2000);
+    toast('已下載:'+filename);
+  }catch(err){
+    showCsvFallback(csvText);
+  }
+}
+
+function showCsvFallback(csvText){
+  showModal({
+    title:'複製 CSV 內容',
+    bodyHtml:'<p class="hint" style="margin:0 0 6px">請全選下方文字並複製,貼到 Excel 或 Google Sheet 中即可。</p>'+
+      '<textarea id="csv-text" style="width:100%;height:220px;font-family:monospace;font-size:12px" readonly></textarea>',
+    onMount:function(body){ body.querySelector('#csv-text').value = csvText; },
+    actions:[
+      {label:'複製', primary:true, onClick:function(body){
+        var ta = body.querySelector('#csv-text');
+        ta.select();
+        navigator.clipboard && navigator.clipboard.writeText(ta.value).then(function(){ toast('已複製到剪貼簿'); }).catch(function(){});
+      }},
+      {label:'關閉'}
+    ]
+  });
+}
+
+/* ---------- stats panel ---------- */
+function renderStatsPanel(unit){
+  var el = document.getElementById('panel-stats');
+  var students = classStudents(unit.classId);
+  var results = students.map(function(s){ return {stu:s, r:studentUnitResult(unit, s.id)}; });
+  var counts = {'已完成':0,'待登錄':0,'待補測':0,'請假':0,'免測':0};
+  results.forEach(function(x){ counts[x.r.status] = (counts[x.r.status]||0)+1; });
+
+  var items = unit.items.slice().sort(function(a,b){ return a.order-b.order; });
+  var itemStats = items.map(function(item){
+    var scores = [];
+    results.forEach(function(x){
+      if(x.r.status!=='已完成') return;
+      var raw = state.records[recKey(unit.id, x.stu.id, item.id)];
+      var c = computeScore(item, raw);
+      if(c.score!==null) scores.push(c.score);
+    });
+    var avg = scores.length ? Math.round(scores.reduce(function(a,b){return a+b;},0)/scores.length) : null;
+    return {item:item, avg:avg, n:scores.length};
+  });
+
+  var pendingNames = results.filter(function(x){ return x.r.status==='待登錄'; }).map(function(x){ return x.stu.name; });
+  var retestNames = results.filter(function(x){ return x.r.status==='待補測'; }).map(function(x){ return x.stu.name; });
+
+  el.innerHTML =
+    '<div class="card">'+
+      '<h2 style="font-size:15px;margin-bottom:10px">班級統計・'+escapeHtml(unit.name)+'</h2>'+
+      '<div class="stat-grid">'+
+        statTile(counts['已完成'],'已完成','ok')+
+        statTile(counts['待登錄'],'待登錄','warn')+
+        statTile(counts['待補測'],'待補測','warn')+
+        statTile(counts['請假']+counts['免測'],'請假／免測','muted')+
+        statTile(students.length,'班級總人數','muted')+
+      '</div>'+
+      '<p class="hint" style="margin:0 0 10px">以下平均僅計算「已完成」登錄的學生,待補測／待登錄／請假／免測學生不計入平均,避免誤算為 0 分。</p>'+
+      itemStats.map(function(st){
+        var pct = st.avg===null ? 0 : st.avg;
+        return '<div class="bar-row">'+
+          '<div style="font-size:12px">'+escapeHtml(st.item.name)+'</div>'+
+          '<div class="bar-track"><div class="bar-fill" style="width:'+pct+'%"></div></div>'+
+          '<div class="tabular" style="font-size:12px">'+(st.avg===null?'無資料':(st.avg+'分'))+'</div>'+
+        '</div>';
+      }).join('')+
+    '</div>'+
+    '<div class="card">'+
+      '<h3 style="font-size:14px;margin-bottom:8px">待登錄學生('+pendingNames.length+')</h3>'+
+      '<div class="pending-list">'+(pendingNames.length?pendingNames.map(function(n){return '<span class="badge warn">'+escapeHtml(n)+'</span>';}).join(''):'<span class="hint">無</span>')+'</div>'+
+    '</div>'+
+    '<div class="card">'+
+      '<h3 style="font-size:14px;margin-bottom:8px">待補測學生('+retestNames.length+')</h3>'+
+      '<div class="pending-list">'+(retestNames.length?retestNames.map(function(n){return '<span class="badge warn">'+escapeHtml(n)+'</span>';}).join(''):'<span class="hint">無</span>')+'</div>'+
+    '</div>';
+}
+function statTile(num,label,tone){
+  return '<div class="stat-tile"><div class="num tabular">'+num+'</div><div class="lbl badge '+tone+'" style="padding:1px 8px">'+label+'</div></div>';
+}
+
+/* ---------- boot ---------- */
+function renderAll(){
+  renderTopbar();
+  renderPanels();
+}
+
+state = load();
+if(!state.activeUnitId && state.units.length) state.activeUnitId = state.units[0].id;
+save();
+renderAll();
+
+})();
+</script>
+</body>
+</html>
