@@ -1,32 +1,37 @@
 /**
- * PE 成績登記 - Apps Script 後端
+ * PE 成績登記 - Apps Script 後端(資料庫版)
  *
- * 用途:接收前端(index.html)的成績資料,存成一份 JSON(存在 Google 雲端硬碟),
- * 並同步鏡像到這份試算表的三個分頁,方便老師直接用 Google Sheet 查看與留存。
+ * 設計方式:
+ * - 「學生名冊」分頁由老師自己在 Google Sheet 上維護(新增/刪除/改名學生都直接改這個分頁)。
+ *   前端只會「讀取」這個分頁來同步名單,不會寫入或覆蓋它。
+ * - 「單元設定」「出席與備註」「成績資料」三個分頁由前端自動寫入(登記分數/調整評量項目時即時同步),
+ *   老師不需要手動操作這幾個分頁,它們是程式自動維護的資料庫。
  *
  * 部署方式請見 README.md。
  */
 
-var DATA_FOLDER_NAME = 'PE成績登記資料';
-var DATA_FILE_NAME = 'pe_grades_data.json';
+var SHEET_ROSTER = '學生名冊';
+var SHEET_UNITS = '單元設定';
+var SHEET_ATTEND = '出席與備註';
+var SHEET_RECORDS = '成績資料';
 
-/* ---------- 選單(在綁定的 Google Sheet 開啟時顯示) ---------- */
+/* ---------- 選單 ---------- */
 function onOpen(){
   SpreadsheetApp.getUi()
     .createMenu('體育成績登記')
     .addItem('一鍵設定', 'setup')
-    .addItem('重新產生成績分頁', 'rebuildSheets')
     .addToUi();
 }
 
 function setup(){
-  getOrCreateDataFile_();
-  rebuildSheets();
+  ensureSheets_();
   SpreadsheetApp.getUi().alert(
     '設定完成。\n\n' +
-    '1. 到「專案設定 → 指令碼屬性」確認已新增 PE_API_KEY。\n' +
-    '2. 到「部署 → 管理部署作業」建立或更新 Web App 部署(執行身分:我;存取權限:任何人)。\n' +
-    '3. 把 Web App 網址與 PE_API_KEY 填進網頁的「雲端同步」設定。'
+    '1. 到「學生名冊」分頁建立您的班級與學生名單(欄位:班級代碼、座號、姓名)。\n' +
+    '2. 到「專案設定 → 指令碼屬性」確認已新增 PE_API_KEY。\n' +
+    '3. 到「部署 → 管理部署作業」建立或更新 Web App 部署(執行身分:我;存取權限:任何人)。\n' +
+    '4. 把 Web App 網址與 PE_API_KEY 填進網頁的「雲端同步」設定。\n\n' +
+    '「班級代碼」請自訂一個好記的代碼(例如 115-1-一年級-1班),登記網頁新增班級時要填一樣的代碼才能對應。'
   );
 }
 
@@ -35,48 +40,62 @@ function getApiKey_(){
   return PropertiesService.getScriptProperties().getProperty('PE_API_KEY');
 }
 
-function getOrCreateFolder_(){
-  var folders = DriveApp.getFoldersByName(DATA_FOLDER_NAME);
-  if(folders.hasNext()) return folders.next();
-  return DriveApp.createFolder(DATA_FOLDER_NAME);
-}
-
-function emptyState_(){
-  return {classes:[], units:[], students:[], attendance:{}, notes:{}, records:{}};
-}
-
-function getOrCreateDataFile_(){
-  var folder = getOrCreateFolder_();
-  var files = folder.getFilesByName(DATA_FILE_NAME);
-  if(files.hasNext()) return files.next();
-  return folder.createFile(DATA_FILE_NAME, JSON.stringify(emptyState_()), MimeType.PLAIN_TEXT);
-}
-
-function loadState_(){
-  var file = getOrCreateDataFile_();
-  var text = file.getBlob().getDataAsString();
-  try{ return JSON.parse(text); }catch(e){ return emptyState_(); }
-}
-
-function saveState_(state){
-  var folder = getOrCreateFolder_();
-  var files = folder.getFilesByName(DATA_FILE_NAME);
-  var file = files.hasNext() ? files.next() : folder.createFile(DATA_FILE_NAME, '{}', MimeType.PLAIN_TEXT);
-  file.setContent(JSON.stringify(state));
-}
-
 function jsonOut_(obj){
   return ContentService.createTextOutput(JSON.stringify(obj)).setMimeType(ContentService.MimeType.JSON);
 }
 
+function checkKey_(key){
+  return !!key && key === getApiKey_();
+}
+
+function ensureSheets_(){
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  ensureSheetWithHeader_(ss, SHEET_ROSTER, ['班級代碼','座號','姓名']);
+  ensureSheetWithHeader_(ss, SHEET_UNITS, ['班級代碼','單元代碼(名稱|週次)','單元名稱','週次','評量項目JSON','更新時間']);
+  ensureSheetWithHeader_(ss, SHEET_ATTEND, ['班級代碼','單元代碼','座號','出席狀態','教師備註','更新時間']);
+  ensureSheetWithHeader_(ss, SHEET_RECORDS, ['班級代碼','單元代碼','座號','評量項目','評量方式','配分%','原始數據','換算分數','更新時間']);
+}
+
+function ensureSheetWithHeader_(ss, name, header){
+  var sh = ss.getSheetByName(name);
+  if(!sh){
+    sh = ss.insertSheet(name);
+    sh.getRange(1,1,1,header.length).setValues([header]);
+    sh.getRange(1,1,1,header.length).setFontWeight('bold');
+    sh.setFrozenRows(1);
+  }
+  return sh;
+}
+
+/** 依 keyCols(欄位 index,從0起)比對 keyValues,找到就更新該列,找不到就新增一列。 */
+function upsertRow_(sh, keyColIdx, keyValues, rowValues){
+  var lastRow = sh.getLastRow();
+  if(lastRow>=2){
+    var range = sh.getRange(2,1,lastRow-1, sh.getLastColumn());
+    var data = range.getValues();
+    for(var i=0;i<data.length;i++){
+      var match = keyColIdx.every(function(colIdx, k){ return String(data[i][colIdx]) === String(keyValues[k]); });
+      if(match){
+        sh.getRange(i+2,1,1,rowValues.length).setValues([rowValues]);
+        return;
+      }
+    }
+  }
+  sh.appendRow(rowValues);
+}
+
+function unitKeyOf_(name, week){ return name+'|'+week; }
+
 /* ---------- Web App 入口 ---------- */
 function doGet(e){
-  var key = e.parameter.key;
-  if(!key || key !== getApiKey_()){
-    return jsonOut_({ok:false, error:'invalid_key'});
+  var p = e.parameter;
+  if(!checkKey_(p.key)){ return jsonOut_({ok:false, error:'invalid_key'}); }
+  ensureSheets_();
+
+  if(p.action === 'pull'){
+    return jsonOut_(pullClass_(p.classKey));
   }
-  var state = loadState_();
-  return jsonOut_({ok:true, state:state, updatedAt: new Date().toISOString()});
+  return jsonOut_({ok:false, error:'unknown_action'});
 }
 
 function doPost(e){
@@ -84,149 +103,84 @@ function doPost(e){
   try{ body = JSON.parse(e.postData.contents); }catch(err){
     return jsonOut_({ok:false, error:'bad_body'});
   }
-  if(!body.key || body.key !== getApiKey_()){
-    return jsonOut_({ok:false, error:'invalid_key'});
-  }
-  if(!body.state){
-    return jsonOut_({ok:false, error:'missing_state'});
-  }
-  saveState_(body.state);
-  try{ rebuildSheets_(body.state); }catch(err){ /* 鏡像到 Sheet 失敗不影響存檔 */ }
-  return jsonOut_({ok:true, updatedAt: new Date().toISOString()});
+  if(!checkKey_(body.key)){ return jsonOut_({ok:false, error:'invalid_key'}); }
+  ensureSheets_();
+
+  if(body.action === 'upsertUnit'){ return jsonOut_(upsertUnit_(body)); }
+  if(body.action === 'upsertRecord'){ return jsonOut_(upsertRecord_(body)); }
+  if(body.action === 'upsertAttendance'){ return jsonOut_(upsertAttendance_(body)); }
+  return jsonOut_({ok:false, error:'unknown_action'});
 }
 
-/* ---------- 鏡像到 Google Sheet ---------- */
-function rebuildSheets(){
-  rebuildSheets_(loadState_());
-}
-
-function rebuildSheets_(state){
+/* ---------- 讀取(老師在「學生名冊」維護,程式只讀) ---------- */
+function pullClass_(classKey){
+  if(!classKey) return {ok:false, error:'missing_classKey'};
   var ss = SpreadsheetApp.getActiveSpreadsheet();
-  writeRoster_(ss, state);
-  writeSummary_(ss, state);
-  writeDetail_(ss, state);
-}
 
-function byId_(arr, id){
-  for(var i=0;i<arr.length;i++){ if(arr[i].id===id) return arr[i]; }
-  return null;
-}
-
-function termLabel_(term){ return term==='2' ? '第二學期' : '第一學期'; }
-
-function classLabel_(cls){
-  if(!cls) return '';
-  return cls.year+'學年度 '+termLabel_(cls.term)+' '+cls.grade+cls.cls;
-}
-
-function getOrCreateSheet_(ss, name){
-  var sh = ss.getSheetByName(name);
-  if(!sh){ sh = ss.insertSheet(name); }
-  sh.clearContents();
-  return sh;
-}
-
-function writeSheetRows_(sh, rows){
-  if(rows.length===0){ rows = [['(尚無資料)']]; }
-  sh.getRange(1,1,rows.length,rows[0].length).setValues(rows);
-  sh.getRange(1,1,1,rows[0].length).setFontWeight('bold');
-  sh.setFrozenRows(1);
-}
-
-function writeRoster_(ss, state){
-  var sh = getOrCreateSheet_(ss, '班級名冊');
-  var rows = [['班級','座號','姓名']];
-  state.students.forEach(function(stu){
-    var cls = byId_(state.classes, stu.classId);
-    rows.push([classLabel_(cls), stu.seat, stu.name]);
-  });
-  writeSheetRows_(sh, rows);
-}
-
-/* 與前端 index.html 的換算規則一致,請兩邊同步修改 */
-function computeScore_(item, raw){
-  if(raw===undefined || raw===null || raw===''){ return null; }
-  if(item.type==='score'){
-    var n = Number(raw);
-    return isNaN(n) ? null : n;
-  }
-  if(item.type==='level'){
-    var lv = (item.config.levels||[]).filter(function(l){ return l.label===raw; })[0];
-    return lv ? lv.score : null;
-  }
-  if(item.type==='metric'){
-    var n2 = Number(raw);
-    if(isNaN(n2)) return null;
-    var best = item.config.best, pass = item.config.pass, dir = item.config.direction;
-    var s;
-    if(dir==='low'){
-      s = (best===pass) ? (n2<=best?100:60) : 60 + (pass-n2)/(pass-best)*40;
-    } else {
-      s = (best===pass) ? (n2>=best?100:60) : 60 + (n2-pass)/(best-pass)*40;
+  var rosterSh = ss.getSheetByName(SHEET_ROSTER);
+  var roster = [];
+  var rData = rosterSh.getDataRange().getValues();
+  for(var i=1;i<rData.length;i++){
+    if(String(rData[i][0])===String(classKey) && rData[i][1]!==''){
+      roster.push({seat:String(rData[i][1]), name:String(rData[i][2])});
     }
-    return Math.max(0, Math.min(100, Math.round(s)));
   }
-  if(item.type==='done'){
-    var opt = (item.config.options||[]).filter(function(o){ return o.label===raw; })[0];
-    return opt ? opt.score : null;
+
+  var unitsSh = ss.getSheetByName(SHEET_UNITS);
+  var uData = unitsSh.getDataRange().getValues();
+  var units = [];
+  for(var j=1;j<uData.length;j++){
+    if(String(uData[j][0])===String(classKey) && uData[j][1]!==''){
+      var items = [];
+      try{ items = JSON.parse(uData[j][4]); }catch(err){ items = []; }
+      units.push({unitKey:String(uData[j][1]), name:String(uData[j][2]), week:String(uData[j][3]), items:items});
+    }
   }
-  return null;
+
+  var attendSh = ss.getSheetByName(SHEET_ATTEND);
+  var aData = attendSh.getDataRange().getValues();
+  var attendance = {}; // unitKey|seat -> {att, note}
+  for(var k=1;k<aData.length;k++){
+    if(String(aData[k][0])===String(classKey) && aData[k][1]!==''){
+      attendance[aData[k][1]+'|'+aData[k][2]] = {att:String(aData[k][3]), note:String(aData[k][4]||'')};
+    }
+  }
+
+  var recSh = ss.getSheetByName(SHEET_RECORDS);
+  var recData = recSh.getDataRange().getValues();
+  var records = {}; // unitKey|seat|itemName -> raw
+  for(var m=1;m<recData.length;m++){
+    if(String(recData[m][0])===String(classKey) && recData[m][1]!==''){
+      records[recData[m][1]+'|'+recData[m][2]+'|'+recData[m][3]] = recData[m][6];
+    }
+  }
+
+  return {ok:true, roster:roster, units:units, attendance:attendance, records:records, updatedAt:new Date().toISOString()};
 }
 
-function studentUnitResult_(state, unit, studentId){
-  var att = state.attendance[unit.id+'|'+studentId] || '出席';
-  var anyMissing = false, weighted = 0;
-  unit.items.forEach(function(item){
-    var raw = state.records[unit.id+'|'+studentId+'|'+item.id];
-    var sc = computeScore_(item, raw);
-    if(sc===null){ anyMissing = true; } else { weighted += sc * (item.weight/100); }
-  });
-  var normal = (att==='出席' || att==='已補測');
-  var status;
-  if(att==='缺席待補測') status='待補測';
-  else if(att==='請假') status='請假';
-  else if(att==='免測') status='免測';
-  else status = anyMissing ? '待登錄' : '已完成';
-  var finalScore = (normal && !anyMissing) ? Math.round(weighted) : null;
-  return {att:att, status:status, finalScore:finalScore};
+/* ---------- 寫入(前端自動呼叫,老師不需手動操作) ---------- */
+function upsertUnit_(body){
+  if(!body.classKey || !body.name || !body.week) return {ok:false, error:'missing_fields'};
+  var sh = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SHEET_UNITS);
+  var unitKey = unitKeyOf_(body.name, body.week);
+  upsertRow_(sh, [0,1], [body.classKey, unitKey],
+    [body.classKey, unitKey, body.name, body.week, JSON.stringify(body.items||[]), new Date().toISOString()]);
+  return {ok:true, unitKey:unitKey, updatedAt:new Date().toISOString()};
 }
 
-function writeSummary_(ss, state){
-  var sh = getOrCreateSheet_(ss, '成績總表');
-  var rows = [['學年度','學期','年級','班級','單元','週次','座號','姓名','出席狀態','加權總成績','狀態','教師備註']];
-  state.units.forEach(function(unit){
-    var cls = byId_(state.classes, unit.classId);
-    if(!cls) return;
-    var students = state.students.filter(function(s){ return s.classId===unit.classId; });
-    students.sort(function(a,b){ return (a.seat||'').localeCompare(b.seat||''); });
-    students.forEach(function(stu){
-      var r = studentUnitResult_(state, unit, stu.id);
-      var note = state.notes[unit.id+'|'+stu.id] || '';
-      rows.push([cls.year, termLabel_(cls.term), cls.grade, cls.cls, unit.name, unit.week,
-        stu.seat, stu.name, r.att, r.finalScore===null?'':r.finalScore, r.status, note]);
-    });
-  });
-  writeSheetRows_(sh, rows);
+function upsertRecord_(body){
+  if(!body.classKey || !body.unitKey || !body.seat || !body.itemName) return {ok:false, error:'missing_fields'};
+  var sh = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SHEET_RECORDS);
+  upsertRow_(sh, [0,1,2,3], [body.classKey, body.unitKey, body.seat, body.itemName],
+    [body.classKey, body.unitKey, body.seat, body.itemName, body.itemType||'', body.weight||0,
+     body.raw===undefined?'':body.raw, body.score===undefined?'':body.score, new Date().toISOString()]);
+  return {ok:true, updatedAt:new Date().toISOString()};
 }
 
-function writeDetail_(ss, state){
-  var sh = getOrCreateSheet_(ss, '成績明細');
-  var rows = [['學年度','學期','年級','班級','單元','週次','座號','姓名','評量項目','評量方式','配分%','原始數據','換算分數']];
-  var typeLabel = {score:'分數', level:'等級', metric:'數據', done:'完成狀態'};
-  state.units.forEach(function(unit){
-    var cls = byId_(state.classes, unit.classId);
-    if(!cls) return;
-    var students = state.students.filter(function(s){ return s.classId===unit.classId; });
-    students.sort(function(a,b){ return (a.seat||'').localeCompare(b.seat||''); });
-    students.forEach(function(stu){
-      unit.items.forEach(function(item){
-        var raw = state.records[unit.id+'|'+stu.id+'|'+item.id];
-        var sc = computeScore_(item, raw);
-        rows.push([cls.year, termLabel_(cls.term), cls.grade, cls.cls, unit.name, unit.week,
-          stu.seat, stu.name, item.name, typeLabel[item.type]||item.type, item.weight,
-          (raw===undefined||raw===null)?'':raw, sc===null?'':sc]);
-      });
-    });
-  });
-  writeSheetRows_(sh, rows);
+function upsertAttendance_(body){
+  if(!body.classKey || !body.unitKey || !body.seat) return {ok:false, error:'missing_fields'};
+  var sh = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SHEET_ATTEND);
+  upsertRow_(sh, [0,1,2], [body.classKey, body.unitKey, body.seat],
+    [body.classKey, body.unitKey, body.seat, body.att||'出席', body.note||'', new Date().toISOString()]);
+  return {ok:true, updatedAt:new Date().toISOString()};
 }

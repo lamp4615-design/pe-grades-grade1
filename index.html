@@ -157,8 +157,8 @@ footer.notice b{font-weight:700}
   <div class="panel" id="panel-stats"></div>
 
   <footer class="notice">
-    <b>資料保存說明:</b> 預設情況下,資料只存在您目前使用的瀏覽器裝置內(localStorage),清除瀏覽器資料、換裝置或換瀏覽器都會遺失。
-    按右上角「雲端同步」並填入您自己部署的 Google Apps Script 網址與金鑰後,可手動「上傳」把資料存到您的 Google Sheet,或「下載」取回雲端最新版本——這是<b>您主動按才會傳輸</b>,不會自動背景上傳。
+    <b>資料保存說明:</b> 本機一律先存瀏覽器(localStorage)當離線備援。設定好右上角「雲端同步」的網址與金鑰後:
+    學生名單請直接在 Google Sheet「學生名冊」分頁維護,按「同步名單」拉取到這個網頁;評量設定、出席狀態、分數則是<b>您在網頁上操作時就會自動即時存到後端</b>(Google Sheet 的「單元設定／出席與備註／成績資料」三個分頁),不用手動上傳。
     未設定雲端同步前,資料不會離開這台裝置。此版本的金鑰保護屬於基本防護,不是正式校務系統等級的存取控制,學生成績仍屬敏感資料,請勿公開分享網址與金鑰。
   </footer>
 </div>
@@ -206,7 +206,7 @@ function defaultState(){
     attendance[key] = idx === students.length-1 ? '缺席待補測' : '出席';
   });
   return {
-    classes:[{id:classId, year:'115', term:'1', grade:'一年級', cls:'1班', teacher:'範例教師'}],
+    classes:[{id:classId, year:'115', term:'1', grade:'一年級', cls:'1班', teacher:'範例教師', classKey:'115-1-一年級-1班'}],
     units:[{id:unitId, classId:classId, name:'基本動作-立定跳遠', week:'第3週', items:items}],
     students: students,
     attendance: attendance,
@@ -382,6 +382,7 @@ function renderTopbar(){
       '<button class="small ghost" id="btn-undo" '+(lastSnapshot?'':'disabled')+'>復原上一步</button>'+
       '<button class="small ghost danger" id="btn-reset">重置範例資料</button>'+
       '<button class="small" id="btn-cloud">雲端同步</button>'+
+      (cloudConfigured() ? '<span id="cloud-badge" class="hint">'+escapeHtml(cloudSyncStatus||'未同步')+'</span>' : '')+
     '</div>'+
     '<div class="topbar-row hint">'+
       (cls ? ('任課教師:'+escapeHtml(cls.teacher)+' ・ 學生人數上限 '+MAX_STUDENTS+' 人') : '尚未建立班級') +
@@ -413,34 +414,39 @@ function renderTopbar(){
   document.getElementById('btn-cloud').onclick = openCloudSyncModal;
 }
 
-/* ---------- 雲端同步(Google Apps Script) ---------- */
+/* ---------- 雲端同步(Google Apps Script 資料庫) ----------
+   設計:「學生名冊」由老師直接在 Google Sheet 維護,前端只「拉取」名單,不會寫入它。
+   評量設定/出席/成績則由前端在每次修改時自動「推送」到後端,老師不用手動上傳/下載整包資料。 */
 var CLOUD_KEY = 'pe_grades_cloud_cfg_v1';
 function loadCloudCfg(){
   try{ var raw = localStorage.getItem(CLOUD_KEY); if(raw) return JSON.parse(raw); }catch(e){}
   return {url:'', key:''};
 }
 function saveCloudCfg(cfg){ try{ localStorage.setItem(CLOUD_KEY, JSON.stringify(cfg)); }catch(e){} }
+function cloudConfigured(){ var c = loadCloudCfg(); return !!(c.url && c.key); }
+function unitKeyOf(unit){ return unit.name+'|'+unit.week; }
+
+var cloudSyncStatus = ''; // 顯示在頂部列的小狀態文字
+function setCloudBadge(msg){ cloudSyncStatus = msg; var b = document.getElementById('cloud-badge'); if(b) b.textContent = msg; }
 
 function openCloudSyncModal(){
   var cfg = loadCloudCfg();
+  var cls = activeClass();
   showModal({
-    title:'雲端同步(Google Apps Script)',
+    title:'雲端同步(Google Apps Script 資料庫)',
     bodyHtml:
-      '<p class="hint" style="margin:0">需要先依照 README 在 Google Apps Script 部署好 Web App,並設定 API 金鑰。此功能為選用,不設定也能單機使用。</p>'+
+      '<p class="hint" style="margin:0">名單請直接在 Google Sheet「學生名冊」分頁維護(班級代碼/座號/姓名),這裡按「同步名單」拉取就好;評量設定、出席、分數會在您操作時自動存到後端,不用手動上傳。詳細部署步驟見 README。</p>'+
       '<div class="form-grid">'+
       '<div class="field full"><label>Apps Script 網址(/exec)</label><input type="text" id="f-cloud-url" value="'+escapeHtml(cfg.url)+'" placeholder="https://script.google.com/macros/s/.../exec"></div>'+
       '<div class="field full"><label>API 金鑰</label><input type="text" id="f-cloud-key" value="'+escapeHtml(cfg.key)+'"></div>'+
       '</div>'+
+      (cls ? '<p class="hint" style="margin:0">目前班級的雲端班級代碼:<b>'+escapeHtml(cls.classKey||'(未設定)')+'</b></p>' : '')+
       '<p id="cloud-status" class="hint" style="margin:0"></p>',
     actions:[
       {label:'關閉'},
-      {label:'⬇ 從雲端下載', onClick:function(body){
+      {label:'同步名單(從 Sheet 拉取)', primary:true, onClick:function(body){
         persistCloudCfg(body);
-        cloudDownload(body);
-      }},
-      {label:'⬆ 上傳目前資料', primary:true, onClick:function(body){
-        persistCloudCfg(body);
-        cloudUpload(body);
+        pullRosterAndData(body);
       }}
     ]
   });
@@ -451,42 +457,115 @@ function persistCloudCfg(body){
   saveCloudCfg({url:url, key:key});
 }
 function setCloudStatus(body, msg){
-  var el = body.querySelector('#cloud-status');
+  var el = body && body.querySelector('#cloud-status');
   if(el) el.textContent = msg;
+  setCloudBadge(msg);
 }
-function cloudUpload(body){
+
+function pullRosterAndData(body){
   var cfg = loadCloudCfg();
+  var cls = activeClass();
   if(!cfg.url || !cfg.key){ setCloudStatus(body,'請先填寫網址與金鑰'); return; }
-  setCloudStatus(body, '上傳中…');
-  fetch(cfg.url, {
-    method:'POST',
-    body: JSON.stringify({key:cfg.key, state:state})
-  }).then(function(r){ return r.json(); }).then(function(data){
-    if(data.ok){ setCloudStatus(body, '已上傳,Google Sheet 已更新('+(data.updatedAt||'')+')'); toast('已同步到 Google Sheet'); }
-    else{ setCloudStatus(body, '上傳失敗:'+(data.error||'未知錯誤')); }
-  }).catch(function(err){ setCloudStatus(body, '連線失敗,請確認網址與部署權限:'+err); });
-}
-function cloudDownload(body){
-  var cfg = loadCloudCfg();
-  if(!cfg.url || !cfg.key){ setCloudStatus(body,'請先填寫網址與金鑰'); return; }
-  setCloudStatus(body, '下載中…');
-  fetch(cfg.url + '?key=' + encodeURIComponent(cfg.key) + '&action=load')
+  if(!cls || !cls.classKey){ setCloudStatus(body,'請先在「新增班級」設定雲端班級代碼'); return; }
+  setCloudStatus(body, '同步中…');
+  fetch(cfg.url + '?key=' + encodeURIComponent(cfg.key) + '&action=pull&classKey=' + encodeURIComponent(cls.classKey))
     .then(function(r){ return r.json(); })
     .then(function(data){
-      if(!data.ok){ setCloudStatus(body, '下載失敗:'+(data.error||'未知錯誤')); return; }
-      if(!data.state || !data.state.classes || !data.state.classes.length){
-        setCloudStatus(body, '雲端目前沒有資料,請先從本機上傳一次。'); return;
-      }
-      setCloudStatus(body, '已取得雲端資料,請確認是否覆蓋本機。');
-      confirmDanger('這會用雲端資料覆蓋目前裝置上的資料,確定要下載嗎?', function(){
+      if(!data.ok){ setCloudStatus(body, '同步失敗:'+(data.error||'未知錯誤')); return; }
+      confirmDanger('這會用 Google Sheet 上的名單與雲端資料,更新目前班級的學生名冊與單元內容,確定要同步嗎?', function(){
         snapshotBeforeChange();
-        state = data.state;
-        if(!state.activeUnitId && state.units.length) state.activeUnitId = state.units[0].id;
-        if(!state.activeClassId && state.classes.length) state.activeClassId = state.classes[0].id;
+        applyCloudPull(cls, data);
         save(); renderAll();
-        toast('已套用雲端資料');
+        setCloudBadge('已同步('+(data.roster||[]).length+'位學生)');
+        toast('已從 Google Sheet 同步名單與資料');
       });
     }).catch(function(err){ setCloudStatus(body, '連線失敗,請確認網址與部署權限:'+err); });
+}
+
+function applyCloudPull(cls, data){
+  // 1) 名單:以 Sheet 為準,整批覆蓋這個班級的學生(以座號比對,盡量保留本機 id)
+  var oldStudents = classStudents(cls.id);
+  var bySeat = {};
+  oldStudents.forEach(function(s){ bySeat[s.seat] = s; });
+  var newStudents = (data.roster||[]).map(function(r){
+    var old = bySeat[r.seat];
+    return {id: old?old.id:uid('stu'), classId:cls.id, seat:r.seat, name:r.name};
+  });
+  state.students = state.students.filter(function(s){ return s.classId!==cls.id; }).concat(newStudents);
+
+  // 2) 單元設定:以 unitKey(名稱|週次) 比對本機既有單元,沒有就新建
+  (data.units||[]).forEach(function(u){
+    var local = unitsForClass(cls.id).find(function(x){ return unitKeyOf(x)===u.unitKey; });
+    if(!local){
+      local = {id:uid('unit'), classId:cls.id, name:u.name, week:u.week, items:[]};
+      state.units.push(local);
+    }
+    local.name = u.name; local.week = u.week;
+    var oldItemsByName = {}; local.items.forEach(function(it){ oldItemsByName[it.name]=it; });
+    local.items = (u.items||[]).map(function(it, idx){
+      var old = oldItemsByName[it.name];
+      return {id: old?old.id:uid('item'), order:idx, name:it.name, type:it.type, weight:it.weight, config:it.config};
+    });
+
+    // 3) 出席/備註/成績:用 unitKey+座號(+項目名稱)寫回本機的 recKey/attKey(以 local id 表示)
+    newStudents.forEach(function(stu){
+      var a = (data.attendance||{})[u.unitKey+'|'+stu.seat];
+      if(a){
+        state.attendance[attKey(local.id, stu.id)] = a.att;
+        state.notes[attKey(local.id, stu.id)] = a.note;
+      }
+      local.items.forEach(function(item){
+        var raw = (data.records||{})[u.unitKey+'|'+stu.seat+'|'+item.name];
+        if(raw!==undefined && raw!==''){ state.records[recKey(local.id, stu.id, item.id)] = raw; }
+      });
+    });
+  });
+
+  if(!state.activeUnitId || !byId(state.units, state.activeUnitId)){
+    var us = unitsForClass(cls.id);
+    if(us.length) state.activeUnitId = us[0].id;
+  }
+}
+
+/* ---------- 自動推送(前端改資料時即時寫回後端,不需老師手動操作) ---------- */
+function cloudPushUnit(unit){
+  if(!cloudConfigured()) return;
+  var cls = activeClass();
+  if(!cls || !cls.classKey) return;
+  setCloudBadge('同步中…');
+  fetch(loadCloudCfg().url, {method:'POST', body: JSON.stringify({
+    key: loadCloudCfg().key, action:'upsertUnit',
+    classKey: cls.classKey, name: unit.name, week: unit.week,
+    items: unit.items.map(function(it){ return {name:it.name, type:it.type, weight:it.weight, config:it.config}; })
+  })}).then(function(r){return r.json();}).then(function(d){ setCloudBadge(d.ok?'已同步':'同步失敗'); })
+    .catch(function(){ setCloudBadge('連線失敗(評量設定未同步)'); });
+}
+function cloudPushRecord(unit, stu, item, raw){
+  if(!cloudConfigured()) return;
+  var cls = activeClass();
+  if(!cls || !cls.classKey) return;
+  var sc = computeScore(item, raw);
+  setCloudBadge('同步中…');
+  fetch(loadCloudCfg().url, {method:'POST', body: JSON.stringify({
+    key: loadCloudCfg().key, action:'upsertRecord',
+    classKey: cls.classKey, unitKey: unitKeyOf(unit), seat: stu.seat,
+    itemName: item.name, itemType: item.type, weight: item.weight,
+    raw: raw===undefined?'':raw, score: sc.score===null?'':sc.score
+  })}).then(function(r){return r.json();}).then(function(d){ setCloudBadge(d.ok?'已同步':'同步失敗'); })
+    .catch(function(){ setCloudBadge('連線失敗(此筆未同步,仍存在本機)'); });
+}
+function cloudPushAttendance(unit, stu){
+  if(!cloudConfigured()) return;
+  var cls = activeClass();
+  if(!cls || !cls.classKey) return;
+  setCloudBadge('同步中…');
+  fetch(loadCloudCfg().url, {method:'POST', body: JSON.stringify({
+    key: loadCloudCfg().key, action:'upsertAttendance',
+    classKey: cls.classKey, unitKey: unitKeyOf(unit), seat: stu.seat,
+    att: state.attendance[attKey(unit.id,stu.id)]||'出席',
+    note: state.notes[attKey(unit.id,stu.id)]||''
+  })}).then(function(r){return r.json();}).then(function(d){ setCloudBadge(d.ok?'已同步':'同步失敗'); })
+    .catch(function(){ setCloudBadge('連線失敗(此筆未同步,仍存在本機)'); });
 }
 
 function escapeHtml(s){
@@ -494,6 +573,8 @@ function escapeHtml(s){
     return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
   });
 }
+
+function suggestClassKey(y,t,g,c){ return y+'-'+t+'-'+g+'-'+c; }
 
 function openNewClassModal(){
   showModal({
@@ -505,7 +586,22 @@ function openNewClassModal(){
       '<div class="field"><label>年級</label><input type="text" id="f-grade" value="一年級"></div>'+
       '<div class="field"><label>班級</label><input type="text" id="f-cls" value="1班"></div>'+
       '<div class="field full"><label>任課教師</label><input type="text" id="f-teacher" placeholder="教師姓名"></div>'+
+      '<div class="field full"><label>雲端班級代碼(需與 Google Sheet「學生名冊」分頁的「班級代碼」欄一致)</label><input type="text" id="f-classkey"></div>'+
       '</div>',
+    onMount:function(body){
+      var fill = function(){
+        var y=body.querySelector('#f-year').value.trim()||'115';
+        var t=body.querySelector('#f-term').value;
+        var g=body.querySelector('#f-grade').value.trim()||'一年級';
+        var c=body.querySelector('#f-cls').value.trim()||'1班';
+        body.querySelector('#f-classkey').value = suggestClassKey(y,t,g,c);
+      };
+      ['#f-year','#f-term','#f-grade','#f-cls'].forEach(function(sel){
+        body.querySelector(sel).addEventListener('input', fill);
+        body.querySelector(sel).addEventListener('change', fill);
+      });
+      fill();
+    },
     actions:[
       {label:'取消'},
       {label:'建立班級', primary:true, onClick:function(body, close){
@@ -517,12 +613,13 @@ function openNewClassModal(){
           term: body.querySelector('#f-term').value,
           grade: body.querySelector('#f-grade').value.trim()||'一年級',
           cls: body.querySelector('#f-cls').value.trim()||'1班',
-          teacher: body.querySelector('#f-teacher').value.trim()||'未填寫'
+          teacher: body.querySelector('#f-teacher').value.trim()||'未填寫',
+          classKey: body.querySelector('#f-classkey').value.trim()||uid('key')
         });
         state.activeClassId = id;
         state.activeUnitId = null;
         save(); close(); renderAll();
-        toast('已建立新班級,請先新增學生與單元');
+        toast('已建立新班級。若要用 Google Sheet 管理名單,請到試算表「學生名冊」分頁用同樣的班級代碼建立學生,再按「雲端同步→同步名單」。');
       }}
     ]
   });
@@ -552,6 +649,7 @@ function openNewUnitModal(){
         });
         state.activeUnitId = id;
         save(); close(); renderAll();
+        cloudPushUnit(byId(state.units, id));
         toast('已建立新單元');
       }}
     ]
@@ -625,28 +723,28 @@ function renderSettingsPanel(unit){
     renderItemConfig(row.querySelector('[data-config]'), item);
 
     row.querySelector('.it-name').onchange = function(e){
-      snapshotBeforeChange(); item.name = e.target.value; save(); renderPanels();
+      snapshotBeforeChange(); item.name = e.target.value; save(); renderPanels(); cloudPushUnit(unit);
     };
     row.querySelector('.it-type').onchange = function(e){
       snapshotBeforeChange();
       item.type = e.target.value;
       item.config = defaultConfigFor(item.type);
-      save(); renderPanels();
+      save(); renderPanels(); cloudPushUnit(unit);
     };
     row.querySelector('.it-weight').onchange = function(e){
-      snapshotBeforeChange(); item.weight = Number(e.target.value)||0; save(); renderPanels();
+      snapshotBeforeChange(); item.weight = Number(e.target.value)||0; save(); renderPanels(); cloudPushUnit(unit);
     };
     row.querySelector('[data-act="up"]').onclick = function(){
-      snapshotBeforeChange(); swapOrder(items, item, -1); save(); renderPanels();
+      snapshotBeforeChange(); swapOrder(items, item, -1); save(); renderPanels(); cloudPushUnit(unit);
     };
     row.querySelector('[data-act="down"]').onclick = function(){
-      snapshotBeforeChange(); swapOrder(items, item, 1); save(); renderPanels();
+      snapshotBeforeChange(); swapOrder(items, item, 1); save(); renderPanels(); cloudPushUnit(unit);
     };
     row.querySelector('[data-act="del"]').onclick = function(){
       confirmDanger('刪除評量項目「'+escapeHtml(item.name)+'」後,該項目的所有登錄資料也會移除,確定要刪除嗎?', function(){
         snapshotBeforeChange();
         unit.items = unit.items.filter(function(i){ return i.id!==item.id; });
-        save(); renderPanels();
+        save(); renderPanels(); cloudPushUnit(unit);
       });
     };
   });
@@ -654,7 +752,7 @@ function renderSettingsPanel(unit){
   document.getElementById('btn-add-item').onclick = function(){
     snapshotBeforeChange();
     unit.items.push({id:uid('item'), name:'新評量項目', type:'score', weight:0, order:unit.items.length, config:defaultConfigFor('score')});
-    save(); renderPanels();
+    save(); renderPanels(); cloudPushUnit(unit);
   };
 }
 
@@ -679,8 +777,8 @@ function renderItemConfig(container, item){
     container.innerHTML =
       '最低 <input type="number" class="cfg-min" value="'+item.config.min+'" style="width:56px">'+
       ' 最高 <input type="number" class="cfg-max" value="'+item.config.max+'" style="width:56px">';
-    container.querySelector('.cfg-min').onchange = function(e){ snapshotBeforeChange(); item.config.min=Number(e.target.value); save(); };
-    container.querySelector('.cfg-max').onchange = function(e){ snapshotBeforeChange(); item.config.max=Number(e.target.value); save(); };
+    container.querySelector('.cfg-min').onchange = function(e){ snapshotBeforeChange(); item.config.min=Number(e.target.value); save(); cloudPushUnit(unit); };
+    container.querySelector('.cfg-max').onchange = function(e){ snapshotBeforeChange(); item.config.max=Number(e.target.value); save(); cloudPushUnit(unit); };
   } else if(item.type==='level' || item.type==='done'){
     var list = item.type==='level' ? item.config.levels : item.config.options;
     var chips = list.map(function(lv, i){
@@ -692,12 +790,12 @@ function renderItemConfig(container, item){
     container.innerHTML = chips + '<button class="small ghost" data-add>+ 新增選項</button>';
     container.querySelectorAll('.level-chip').forEach(function(chip){
       var i = Number(chip.dataset.i);
-      chip.querySelector('.lv-label').onchange = function(e){ snapshotBeforeChange(); list[i].label=e.target.value; save(); };
-      chip.querySelector('.lv-score').onchange = function(e){ snapshotBeforeChange(); list[i].score=Number(e.target.value); save(); };
-      chip.querySelector('[data-rm]').onclick = function(){ snapshotBeforeChange(); list.splice(i,1); save(); renderPanels(); };
+      chip.querySelector('.lv-label').onchange = function(e){ snapshotBeforeChange(); list[i].label=e.target.value; save(); cloudPushUnit(unit); };
+      chip.querySelector('.lv-score').onchange = function(e){ snapshotBeforeChange(); list[i].score=Number(e.target.value); save(); cloudPushUnit(unit); };
+      chip.querySelector('[data-rm]').onclick = function(){ snapshotBeforeChange(); list.splice(i,1); save(); renderPanels(); cloudPushUnit(unit); };
     });
     container.querySelector('[data-add]').onclick = function(){
-      snapshotBeforeChange(); list.push({label:'新選項', score:70}); save(); renderPanels();
+      snapshotBeforeChange(); list.push({label:'新選項', score:70}); save(); renderPanels(); cloudPushUnit(unit);
     };
   } else if(item.type==='metric'){
     container.innerHTML =
@@ -706,10 +804,10 @@ function renderItemConfig(container, item){
       ' 及格值 <input type="number" class="cfg-pass" value="'+item.config.pass+'" style="width:56px">'+
       ' <select class="cfg-dir"><option value="low"'+(item.config.direction==='low'?' selected':'')+'>數值越低越好</option>'+
       '<option value="high"'+(item.config.direction==='high'?' selected':'')+'>數值越高越好</option></select>';
-    container.querySelector('.cfg-unit').onchange = function(e){ snapshotBeforeChange(); item.config.unit=e.target.value; save(); };
-    container.querySelector('.cfg-best').onchange = function(e){ snapshotBeforeChange(); item.config.best=Number(e.target.value); save(); };
-    container.querySelector('.cfg-pass').onchange = function(e){ snapshotBeforeChange(); item.config.pass=Number(e.target.value); save(); };
-    container.querySelector('.cfg-dir').onchange = function(e){ snapshotBeforeChange(); item.config.direction=e.target.value; save(); };
+    container.querySelector('.cfg-unit').onchange = function(e){ snapshotBeforeChange(); item.config.unit=e.target.value; save(); cloudPushUnit(unit); };
+    container.querySelector('.cfg-best').onchange = function(e){ snapshotBeforeChange(); item.config.best=Number(e.target.value); save(); cloudPushUnit(unit); };
+    container.querySelector('.cfg-pass').onchange = function(e){ snapshotBeforeChange(); item.config.pass=Number(e.target.value); save(); cloudPushUnit(unit); };
+    container.querySelector('.cfg-dir').onchange = function(e){ snapshotBeforeChange(); item.config.direction=e.target.value; save(); cloudPushUnit(unit); };
   }
 }
 
@@ -780,6 +878,7 @@ function renderRosterPanel(unit){
         '<button id="btn-export-csv">匯出 CSV</button>'+
       '</div>'+
       (students.length>=MAX_STUDENTS ? '<p class="hint" style="margin:0 0 8px">已達班級人數上限 '+MAX_STUDENTS+' 人</p>' : '')+
+      (cloudConfigured() ? '<p class="hint" style="margin:0 0 8px">已連接雲端:建議直接在 Google Sheet「學生名冊」分頁增刪學生,再按「雲端同步→同步名單」,避免兩邊名單不一致。</p>' : '')+
       '<div class="table-wrap"><table><thead>'+head+'</thead><tbody>'+rows+'</tbody></table></div>'+
       (filtered.length===0 ? '<p class="hint" style="margin-top:10px">沒有符合篩選條件的學生。</p>' : '')+
     '</div>';
@@ -802,12 +901,16 @@ function renderRosterPanel(unit){
       snapshotBeforeChange();
       state.attendance[attKey(unit.id, sel.dataset.stu)] = sel.value;
       save(); renderAll();
+      var stu = byId(state.students, sel.dataset.stu);
+      if(stu) cloudPushAttendance(unit, stu);
     };
   });
   el.querySelectorAll('.note-input').forEach(function(inp){
     inp.onchange = function(){
       state.notes[attKey(unit.id, inp.dataset.stu)] = inp.value;
       save();
+      var stu = byId(state.students, inp.dataset.stu);
+      if(stu) cloudPushAttendance(unit, stu);
     };
   });
   el.querySelectorAll('[data-act="del-stu"]').forEach(function(btn){
@@ -854,6 +957,9 @@ function bindCellInputs(el, unit, items){
       snapshotBeforeChange();
       state.records[recKey(unit.id, inp.dataset.stu, inp.dataset.item)] = inp.value;
       save(); renderRosterPanel(unit); renderStatsPanel(unit);
+      var stu = byId(state.students, inp.dataset.stu);
+      var item = byId(items, inp.dataset.item);
+      if(stu && item) cloudPushRecord(unit, stu, item, inp.value);
     };
     inp.addEventListener('change', commit);
     inp.addEventListener('keydown', function(e){
@@ -876,8 +982,12 @@ function bindCellInputs(el, unit, items){
       snapshotBeforeChange();
       var key = recKey(unit.id, btn.dataset.stu, btn.dataset.item);
       var same = state.records[key] === btn.dataset.val;
-      state.records[key] = same ? '' : btn.dataset.val; // 再點一次可取消選擇
+      var newVal = same ? '' : btn.dataset.val; // 再點一次可取消選擇
+      state.records[key] = newVal;
       save(); renderRosterPanel(unit); renderStatsPanel(unit);
+      var stu = byId(state.students, btn.dataset.stu);
+      var item = byId(items, btn.dataset.item);
+      if(stu && item) cloudPushRecord(unit, stu, item, newVal);
     });
   });
 }
