@@ -48,6 +48,10 @@ function checkKey_(key){
   return !!key && key === getApiKey_();
 }
 
+/** 去除頭尾空白,並把值一律轉成字串,避免「一年級1班 」「115-1-一年級-1班」這類打字差異或
+ *  Sheet 把座號存成數字(1)、前端存成字串("1")的型別差異造成比對不到。 */
+function norm_(v){ return String(v===undefined||v===null?'':v).trim(); }
+
 function ensureSheets_(){
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   ensureSheetWithHeader_(ss, SHEET_ROSTER, ['班級代碼','座號','姓名']);
@@ -74,7 +78,7 @@ function upsertRow_(sh, keyColIdx, keyValues, rowValues){
     var range = sh.getRange(2,1,lastRow-1, sh.getLastColumn());
     var data = range.getValues();
     for(var i=0;i<data.length;i++){
-      var match = keyColIdx.every(function(colIdx, k){ return String(data[i][colIdx]) === String(keyValues[k]); });
+      var match = keyColIdx.every(function(colIdx, k){ return norm_(data[i][colIdx]) === norm_(keyValues[k]); });
       if(match){
         sh.getRange(i+2,1,1,rowValues.length).setValues([rowValues]);
         return;
@@ -113,74 +117,90 @@ function doPost(e){
 }
 
 /* ---------- 讀取(老師在「學生名冊」維護,程式只讀) ---------- */
-function pullClass_(classKey){
+function pullClass_(classKeyRaw){
+  var classKey = norm_(classKeyRaw);
   if(!classKey) return {ok:false, error:'missing_classKey'};
   var ss = SpreadsheetApp.getActiveSpreadsheet();
 
   var rosterSh = ss.getSheetByName(SHEET_ROSTER);
+  if(!rosterSh){
+    return {ok:false, error:'sheet_not_found', message:'找不到「'+SHEET_ROSTER+'」分頁,請確認分頁名稱完全一致(含是否有多餘空白)。'};
+  }
   var roster = [];
+  var seenClassKeys = {}; // 用來回報「Sheet 裡實際有哪些班級代碼」,方便抓打字落差
   var rData = rosterSh.getDataRange().getValues();
   for(var i=1;i<rData.length;i++){
-    if(String(rData[i][0])===String(classKey) && rData[i][1]!==''){
-      roster.push({seat:String(rData[i][1]), name:String(rData[i][2])});
+    var rowClassKey = norm_(rData[i][0]);
+    if(!rowClassKey) continue;
+    seenClassKeys[rowClassKey] = true;
+    if(rowClassKey===classKey && norm_(rData[i][1])!==''){
+      roster.push({seat:norm_(rData[i][1]), name:norm_(rData[i][2])});
     }
   }
 
   var unitsSh = ss.getSheetByName(SHEET_UNITS);
-  var uData = unitsSh.getDataRange().getValues();
+  var uData = unitsSh ? unitsSh.getDataRange().getValues() : [];
   var units = [];
   for(var j=1;j<uData.length;j++){
-    if(String(uData[j][0])===String(classKey) && uData[j][1]!==''){
+    if(norm_(uData[j][0])===classKey && norm_(uData[j][1])!==''){
       var items = [];
       try{ items = JSON.parse(uData[j][4]); }catch(err){ items = []; }
-      units.push({unitKey:String(uData[j][1]), name:String(uData[j][2]), week:String(uData[j][3]), items:items});
+      units.push({unitKey:norm_(uData[j][1]), name:norm_(uData[j][2]), week:norm_(uData[j][3]), items:items});
     }
   }
 
   var attendSh = ss.getSheetByName(SHEET_ATTEND);
-  var aData = attendSh.getDataRange().getValues();
+  var aData = attendSh ? attendSh.getDataRange().getValues() : [];
   var attendance = {}; // unitKey|seat -> {att, note}
   for(var k=1;k<aData.length;k++){
-    if(String(aData[k][0])===String(classKey) && aData[k][1]!==''){
-      attendance[aData[k][1]+'|'+aData[k][2]] = {att:String(aData[k][3]), note:String(aData[k][4]||'')};
+    if(norm_(aData[k][0])===classKey && norm_(aData[k][1])!==''){
+      attendance[norm_(aData[k][1])+'|'+norm_(aData[k][2])] = {att:norm_(aData[k][3]), note:norm_(aData[k][4])};
     }
   }
 
   var recSh = ss.getSheetByName(SHEET_RECORDS);
-  var recData = recSh.getDataRange().getValues();
+  var recData = recSh ? recSh.getDataRange().getValues() : [];
   var records = {}; // unitKey|seat|itemName -> raw
   for(var m=1;m<recData.length;m++){
-    if(String(recData[m][0])===String(classKey) && recData[m][1]!==''){
-      records[recData[m][1]+'|'+recData[m][2]+'|'+recData[m][3]] = recData[m][6];
+    if(norm_(recData[m][0])===classKey && norm_(recData[m][1])!==''){
+      records[norm_(recData[m][1])+'|'+norm_(recData[m][2])+'|'+norm_(recData[m][3])] = recData[m][6];
     }
   }
 
-  return {ok:true, roster:roster, units:units, attendance:attendance, records:records, updatedAt:new Date().toISOString()};
+  var result = {ok:true, roster:roster, units:units, attendance:attendance, records:records, updatedAt:new Date().toISOString()};
+  if(roster.length===0){
+    result.warning = '在「'+SHEET_ROSTER+'」分頁裡找不到班級代碼「'+classKey+'」的學生。';
+    result.availableClassKeys = Object.keys(seenClassKeys);
+  }
+  return result;
 }
 
 /* ---------- 寫入(前端自動呼叫,老師不需手動操作) ---------- */
 function upsertUnit_(body){
-  if(!body.classKey || !body.name || !body.week) return {ok:false, error:'missing_fields'};
+  var classKey = norm_(body.classKey), name = norm_(body.name), week = norm_(body.week);
+  if(!classKey || !name || !week) return {ok:false, error:'missing_fields'};
   var sh = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SHEET_UNITS);
-  var unitKey = unitKeyOf_(body.name, body.week);
-  upsertRow_(sh, [0,1], [body.classKey, unitKey],
-    [body.classKey, unitKey, body.name, body.week, JSON.stringify(body.items||[]), new Date().toISOString()]);
+  var unitKey = unitKeyOf_(name, week);
+  upsertRow_(sh, [0,1], [classKey, unitKey],
+    [classKey, unitKey, name, week, JSON.stringify(body.items||[]), new Date().toISOString()]);
   return {ok:true, unitKey:unitKey, updatedAt:new Date().toISOString()};
 }
 
 function upsertRecord_(body){
-  if(!body.classKey || !body.unitKey || !body.seat || !body.itemName) return {ok:false, error:'missing_fields'};
+  var classKey = norm_(body.classKey), unitKey = norm_(body.unitKey), seat = norm_(body.seat), itemName = norm_(body.itemName);
+  if(!classKey || !unitKey || !seat || !itemName) return {ok:false, error:'missing_fields'};
   var sh = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SHEET_RECORDS);
-  upsertRow_(sh, [0,1,2,3], [body.classKey, body.unitKey, body.seat, body.itemName],
-    [body.classKey, body.unitKey, body.seat, body.itemName, body.itemType||'', body.weight||0,
+  upsertRow_(sh, [0,1,2,3], [classKey, unitKey, seat, itemName],
+    [classKey, unitKey, seat, itemName, body.itemType||'', body.weight||0,
      body.raw===undefined?'':body.raw, body.score===undefined?'':body.score, new Date().toISOString()]);
   return {ok:true, updatedAt:new Date().toISOString()};
 }
 
 function upsertAttendance_(body){
-  if(!body.classKey || !body.unitKey || !body.seat) return {ok:false, error:'missing_fields'};
+  var classKey = norm_(body.classKey), unitKey = norm_(body.unitKey), seat = norm_(body.seat);
+  if(!classKey || !unitKey || !seat) return {ok:false, error:'missing_fields'};
   var sh = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SHEET_ATTEND);
-  upsertRow_(sh, [0,1,2], [body.classKey, body.unitKey, body.seat],
-    [body.classKey, body.unitKey, body.seat, body.att||'出席', body.note||'', new Date().toISOString()]);
+  upsertRow_(sh, [0,1,2], [classKey, unitKey, seat],
+    [classKey, unitKey, seat, body.att||'出席', body.note||'', new Date().toISOString()]);
   return {ok:true, updatedAt:new Date().toISOString()};
 }

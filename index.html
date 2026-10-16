@@ -471,7 +471,12 @@ function pullRosterAndData(body){
   fetch(cfg.url + '?key=' + encodeURIComponent(cfg.key) + '&action=pull&classKey=' + encodeURIComponent(cls.classKey))
     .then(function(r){ return r.json(); })
     .then(function(data){
-      if(!data.ok){ setCloudStatus(body, '同步失敗:'+(data.error||'未知錯誤')); return; }
+      if(!data.ok){ setCloudStatus(body, '同步失敗:'+(data.message||data.error||'未知錯誤')); return; }
+      if(data.warning){
+        var avail = (data.availableClassKeys||[]);
+        setCloudStatus(body, data.warning + (avail.length ? ('Sheet 裡目前有的班級代碼:'+avail.join('、')) : '(Sheet 裡目前沒有任何班級代碼)'));
+        return;
+      }
       confirmDanger('這會用 Google Sheet 上的名單與雲端資料,更新目前班級的學生名冊與單元內容,確定要同步嗎?', function(){
         snapshotBeforeChange();
         applyCloudPull(cls, data);
