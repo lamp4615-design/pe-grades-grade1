@@ -1,0 +1,5 @@
+tests/**
+index.html
+README.md
+.gitignore
+node_modules/**

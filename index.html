@@ -1,1166 +1,797 @@
 <!doctype html>
-<html lang="zh-Hant">
+<html lang="zh-Hant-TW">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>體育課成績登記</title>
+<meta name="color-scheme" content="light">
+<title>體育課成績登記・小一</title>
 <style>
-/* layout: top bar (class/unit context) -> tab nav -> one scrollable panel per tab -> footer data notice */
 :root{
-  --bg:#f6f5f0; --surface:#ffffff; --surface-2:#edefe6; --border:#d9d6c9;
-  --fg:#1f2320; --fg-muted:#5c6158; --accent:#1f6f54; --accent-fg:#ffffff;
-  --ok:#1f6f54; --ok-bg:#e3f1e9; --warn:#9a6300; --warn-bg:#fbeecb;
-  --danger:#a33b34; --danger-bg:#f7e4e1; --info:#2b5f8a; --info-bg:#e3eef5;
-  color-scheme: light;
-}
-@media (prefers-color-scheme: dark){
-  :root:not([data-theme="light"]){
-    --bg:#141815; --surface:#1b211c; --surface-2:#232a24; --border:#333a32;
-    --fg:#edf1ea; --fg-muted:#9aa39a; --accent:#5ecf9d; --accent-fg:#0d1510;
-    --ok:#5ecf9d; --ok-bg:#163327; --warn:#e0a94a; --warn-bg:#3a2d10;
-    --danger:#e2847a; --danger-bg:#3a1e1c; --info:#7fb2dd; --info-bg:#18293a;
-    color-scheme: dark;
-  }
-}
-:root[data-theme="dark"]{
-  --bg:#141815; --surface:#1b211c; --surface-2:#232a24; --border:#333a32;
-  --fg:#edf1ea; --fg-muted:#9aa39a; --accent:#5ecf9d; --accent-fg:#0d1510;
-  --ok:#5ecf9d; --ok-bg:#163327; --warn:#e0a94a; --warn-bg:#3a2d10;
-  --danger:#e2847a; --danger-bg:#3a1e1c; --info:#7fb2dd; --info-bg:#18293a;
-  color-scheme: dark;
+  --bg:#f4f6f8; --card:#fff; --ink:#1f2933; --mute:#667085; --line:#d9dee5; --brand:#2455d6; --brand-d:#1b43ad;
+  --g4:#0e7490; --g3:#16a34a; --g2:#d97706; --g1:#dc2626; --abs:#8a94a3;
+  --g4t:#d9f1f6; --g3t:#dcf5e3; --g2t:#fdeccd; --g1t:#fde0e0; --abst:#e8ebef;
+  --r:12px; --tap:48px;
 }
 *{box-sizing:border-box}
-body{
-  margin:0;
-  background:var(--bg); color:var(--fg);
-  font-family:"Noto Sans TC","PingFang TC","Microsoft JhengHei",system-ui,sans-serif;
-  padding-left:max(16px,env(safe-area-inset-left,0px));
-  padding-right:max(16px,env(safe-area-inset-right,0px));
-  padding-block:16px 48px;
-  font-size:14px; line-height:1.5;
-}
-h1,h2,h3{font-weight:700; text-wrap:balance; margin:0}
-.app{max-width:1200px; margin:0 auto; display:flex; flex-direction:column; gap:14px}
-.tabular{font-variant-numeric:tabular-nums}
-
-/* top bar */
-.topbar{background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:14px 16px; display:flex; flex-direction:column; gap:10px}
-.topbar-row{display:flex; flex-wrap:wrap; gap:10px; align-items:center}
-.field{display:flex; flex-direction:column; gap:3px; min-width:0}
-.field label{font-size:11px; color:var(--fg-muted)}
-select,input[type=text],input[type=number],input[type=date]{
-  background:var(--surface); color:var(--fg); border:1px solid var(--border);
-  border-radius:6px; padding:6px 8px; font-size:13px; font-family:inherit;
-}
-select:focus,input:focus{outline:2px solid var(--accent); outline-offset:1px}
-button{
-  font-family:inherit; font-size:13px; border-radius:6px; border:1px solid var(--border);
-  background:var(--surface-2); color:var(--fg); padding:9px 14px; cursor:pointer; min-height:38px;
-}
-button:hover{border-color:var(--accent)}
-button:focus-visible{outline:2px solid var(--accent); outline-offset:1px}
-button.primary{background:var(--accent); color:var(--accent-fg); border-color:var(--accent); font-weight:500}
-button.ghost{background:transparent}
-button.danger{color:var(--danger); border-color:var(--danger)}
-button.small{padding:6px 10px; font-size:12px; min-height:32px}
-button:disabled{opacity:.45; cursor:not-allowed}
-.seg-group{display:flex; flex-wrap:wrap; gap:4px; max-width:220px}
-.seg-btn{padding:7px 10px; font-size:12px; border-radius:6px; border:1px solid var(--border); background:var(--surface-2); color:var(--fg); min-height:34px; cursor:pointer}
-.seg-btn.active{background:var(--accent); color:var(--accent-fg); border-color:var(--accent); font-weight:600}
-.seg-btn:hover{border-color:var(--accent)}
-.hint{color:var(--fg-muted); font-size:12px}
-.badge{display:inline-flex; align-items:center; gap:4px; border-radius:999px; padding:2px 9px; font-size:12px; font-weight:500; white-space:nowrap}
-.badge.ok{background:var(--ok-bg); color:var(--ok)}
-.badge.warn{background:var(--warn-bg); color:var(--warn)}
-.badge.danger{background:var(--danger-bg); color:var(--danger)}
-.badge.info{background:var(--info-bg); color:var(--info)}
-.badge.muted{background:var(--surface-2); color:var(--fg-muted)}
-
-/* tabs */
-.tabs{display:flex; gap:4px; border-bottom:1px solid var(--border)}
-.tab-btn{background:transparent; border:none; border-bottom:2px solid transparent; border-radius:0; padding:8px 4px; margin-right:14px; color:var(--fg-muted); font-weight:500}
-.tab-btn.active{color:var(--accent); border-bottom-color:var(--accent)}
-.tab-btn:hover{color:var(--fg)}
-.panel{display:none}
-.panel.active{display:block}
-.card{background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:16px}
-.card + .card{margin-top:12px}
-
-/* assessment settings */
-.item-row{display:grid; grid-template-columns:28px 1.4fr 110px 90px 1.6fr auto; gap:8px; align-items:center; padding:8px 0; border-bottom:1px solid var(--border)}
-.item-row:last-child{border-bottom:none}
-.item-row .order-btns{display:flex; flex-direction:column; gap:2px}
-.weight-warn{display:flex; align-items:center; gap:8px; margin-top:10px; padding:8px 10px; border-radius:8px}
-.config-inline{display:flex; flex-wrap:wrap; gap:6px; align-items:center; font-size:12px}
-.level-chip{display:flex; align-items:center; gap:4px; background:var(--surface-2); border:1px solid var(--border); border-radius:6px; padding:3px 6px}
-.level-chip input[type=text]{width:64px; padding:3px 5px; font-size:12px}
-.level-chip input[type=number]{width:48px; padding:3px 5px; font-size:12px}
-
-/* roster table */
-.toolbar{display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin-bottom:12px}
-.toolbar input[type=search]{min-width:160px}
-.filter-chip{border-radius:999px; padding:5px 12px; font-size:12px}
-.filter-chip.active{background:var(--accent); color:var(--accent-fg); border-color:var(--accent)}
-.table-wrap{overflow-x:auto; border:1px solid var(--border); border-radius:8px}
-table{border-collapse:collapse; width:100%; min-width:680px}
-th,td{padding:6px 8px; border-bottom:1px solid var(--border); text-align:left; white-space:nowrap; font-size:13px}
-thead th{background:var(--surface-2); position:sticky; top:0; font-weight:600; color:var(--fg-muted); font-size:12px}
-tbody tr:hover{background:var(--surface-2)}
-td.sticky-col,th.sticky-col{position:sticky; background:var(--surface); z-index:2}
-th.sticky-col{background:var(--surface-2)}
-td.col-seat,th.col-seat{left:0; min-width:44px}
-td.col-name,th.col-name{left:44px; min-width:76px; border-right:1px solid var(--border)}
-.cell-input{width:72px; padding:4px 6px; font-size:13px}
-.cell-input.bad{border-color:var(--danger); outline:1px solid var(--danger)}
-.raw-score{display:flex; flex-direction:column; gap:2px; align-items:flex-start}
-.raw-score .converted{font-size:11px; color:var(--fg-muted)}
-.note-input{width:120px; padding:4px 6px; font-size:12px}
-.weighted-total{font-weight:700}
-.row-actions button{padding:2px 6px; font-size:12px}
-
-/* stats */
-.stat-grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(130px,1fr)); gap:10px; margin-bottom:16px}
-.stat-tile{background:var(--surface-2); border:1px solid var(--border); border-radius:8px; padding:12px; display:flex; flex-direction:column; gap:4px}
-.stat-tile .num{font-size:26px; font-weight:700; font-family:inherit}
-.stat-tile .lbl{font-size:12px; color:var(--fg-muted)}
-.bar-row{display:grid; grid-template-columns:120px 1fr 48px; gap:10px; align-items:center; padding:6px 0}
-.bar-track{background:var(--surface-2); border-radius:4px; height:10px; overflow:hidden}
-.bar-fill{background:var(--accent); height:100%}
-.pending-list{display:flex; flex-wrap:wrap; gap:6px}
-
-/* modal */
-.modal-backdrop{position:fixed; inset:0; background:rgba(0,0,0,.4); display:flex; align-items:center; justify-content:center; padding:16px; z-index:50}
-.modal{background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:20px; max-width:420px; width:100%; display:flex; flex-direction:column; gap:12px}
-.modal h3{font-size:16px}
-.modal-actions{display:flex; justify-content:flex-end; gap:8px}
-.form-grid{display:grid; grid-template-columns:1fr 1fr; gap:10px}
-.form-grid .full{grid-column:1 / -1}
-
-footer.notice{background:var(--info-bg); color:var(--info); border-radius:8px; padding:10px 14px; font-size:12px; line-height:1.6}
-footer.notice b{font-weight:700}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;font:16px/1.45 system-ui,-apple-system,"Noto Sans TC","Microsoft JhengHei",sans-serif;background:var(--bg);color:var(--ink);
+  -webkit-tap-highlight-color:transparent;padding-bottom:70px}
+button,select,input,textarea{font:inherit;color:inherit}
+button{cursor:pointer;border:1px solid var(--line);background:#fff;border-radius:10px;min-height:var(--tap);min-width:var(--tap);padding:0 14px;touch-action:manipulation}
+button:active{filter:brightness(.93)}
+button.primary{background:var(--brand);border-color:var(--brand);color:#fff;font-weight:600}
+button.danger{color:var(--g1);border-color:#f2b8b8}
+button[disabled]{opacity:.45;cursor:not-allowed}
+select,input[type=date],input[type=text],input[type=password],input[type=number],textarea{min-height:var(--tap);border:1px solid var(--line);border-radius:10px;padding:0 10px;background:#fff;max-width:100%}
 [hidden]{display:none!important}
-.toast{position:fixed; bottom:20px; left:50%; transform:translateX(-50%); background:var(--fg); color:var(--bg); padding:8px 16px; border-radius:8px; font-size:13px; z-index:60}
+
+/* ── 頂列 ── */
+#top{position:sticky;top:0;z-index:20;background:#fff;border-bottom:1px solid var(--line);box-shadow:0 2px 6px rgba(0,0,0,.05)}
+.bar{display:flex;gap:8px;align-items:center;padding:6px 12px;flex-wrap:wrap}
+.tabs{display:flex;gap:4px}
+.tabs button{border:0;background:transparent;font-weight:600;border-bottom:3px solid transparent;border-radius:0;color:var(--mute)}
+.tabs button.on{color:var(--brand);border-bottom-color:var(--brand)}
+.grow{flex:1}
+.row{display:flex;gap:8px;align-items:center;padding:4px 12px;flex-wrap:wrap}
+.chips{display:flex;gap:6px;overflow-x:auto;padding:4px 12px;scrollbar-width:none}
+.chips::-webkit-scrollbar{display:none}
+.chip{flex:none;border-radius:999px;padding:0 16px;background:#fff}
+.chip.on{background:var(--brand);color:#fff;border-color:var(--brand);font-weight:600}
+#regFilters{padding:8px 0 0}
+.goal{margin:2px 12px 8px;padding:8px 12px;background:#eef3ff;border:1px solid #cfdcff;border-radius:var(--r)}
+.goal b{font-size:1.08rem}
+.thr{display:flex;flex-wrap:wrap;gap:6px;margin-top:4px}
+.pill{display:inline-flex;align-items:center;gap:4px;padding:2px 10px;border-radius:999px;font-size:.88rem;font-weight:600;background:var(--abst);color:#333}
+.pill.g4,.badge.g4{background:var(--g4t);color:var(--g4)} .pill.g3,.badge.g3{background:var(--g3t);color:#117a37}
+.pill.g2,.badge.g2{background:var(--g2t);color:#a35a00} .pill.g1,.badge.g1{background:var(--g1t);color:var(--g1)}
+
+/* ── 進度與工具 ── */
+.prog{margin:10px 12px 6px}
+.progtxt{display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center;margin-bottom:4px}
+.meter{height:10px;border-radius:6px;background:#e3e7ec;overflow:hidden}
+.meter>i{display:block;height:100%;background:var(--brand);width:0;transition:width .2s}
+.tools{display:flex;flex-wrap:wrap;gap:8px;margin:8px 12px}
+.tools button.on{background:#fff3cd;border-color:#e6c14d}
+.timerbar{margin:8px 12px;padding:8px 12px;border-radius:var(--r);background:#1f2933;color:#fff;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.timerbar .clock{font:700 1.8rem/1 ui-monospace,Menlo,Consolas,monospace;min-width:5.2em}
+
+/* ── 學生卡片 ── */
+#grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(310px,1fr));gap:10px;padding:0 12px}
+@media (max-width:480px){#grid{grid-template-columns:minmax(0,1fr)}}
+.card{background:var(--card);border:1px solid var(--line);border-left:8px solid var(--line);border-radius:var(--r);padding:8px 10px 10px;display:flex;flex-direction:column;gap:8px}
+.card.g4{border-left-color:var(--g4);background:linear-gradient(90deg,var(--g4t),#fff 55%)}
+.card.g3{border-left-color:var(--g3);background:linear-gradient(90deg,var(--g3t),#fff 55%)}
+.card.g2{border-left-color:var(--g2);background:linear-gradient(90deg,var(--g2t),#fff 55%)}
+.card.g1{border-left-color:var(--g1);background:linear-gradient(90deg,var(--g1t),#fff 55%)}
+.card.abs{border-left-color:var(--abs);background:var(--abst)}
+.card[data-hide]{display:none}
+.chead{display:flex;align-items:center;gap:8px}
+.seat{font:700 1.15rem/1 ui-monospace,Menlo,Consolas,monospace;background:#e8edf5;border-radius:8px;padding:6px 8px;min-width:2.4em;text-align:center}
+.sname{font-size:1.2rem;font-weight:700;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.badge{font-weight:700;border-radius:8px;padding:4px 10px;background:var(--abst);color:var(--mute);min-width:3.4em;text-align:center}
+.ic{padding:0 10px;font-size:.95rem}
+.ic.abs.on{background:var(--abs);color:#fff;border-color:var(--abs)}
+.ic.note.has{background:#fff3cd;border-color:#e6c14d}
+.cbody{display:flex;flex-direction:column;gap:8px}
+.card.abs .cbody{opacity:.35;pointer-events:none}
+.num{display:flex;gap:8px;align-items:stretch}
+.num input{flex:1;min-width:0;text-align:center;font-size:1.7rem;font-weight:700;min-height:56px}
+.num button{font-size:1.4rem;font-weight:700;min-width:60px;min-height:56px}
+.quick{display:flex;gap:6px}
+.quick button{flex:1;font-size:.92rem;padding:0 4px}
+.quick .q4{border-color:var(--g4);color:var(--g4)} .quick .q3{border-color:var(--g3);color:#117a37} .quick .q2{border-color:var(--g2);color:#a35a00}
+.lv{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.lv button{flex-direction:column;padding:4px 2px;font-size:.92rem;line-height:1.2;min-height:60px}
+.lv button.on.g4{background:var(--g4);color:#fff;border-color:var(--g4)} .lv button.on.g3{background:var(--g3);color:#fff;border-color:var(--g3)}
+.lv button.on.g2{background:var(--g2);color:#fff;border-color:var(--g2)} .lv button.on.g1{background:var(--g1);color:#fff;border-color:var(--g1)}
+.ck{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.ck button{text-align:left;padding:6px 10px;line-height:1.25;min-height:54px;display:flex;align-items:center;gap:6px}
+.ck button::before{content:"";flex:none;width:22px;height:22px;border:2px solid #9aa5b4;border-radius:6px;background:#fff}
+.ck button.on{background:#e8f6ec;border-color:var(--g3)}
+.ck button.on::before{background:var(--g3);border-color:var(--g3);content:"✓";color:#fff;text-align:center;line-height:18px;font-weight:700}
+.noterow input{width:100%}
+.stamp{display:none;background:#1f2933;color:#fff;font-size:1.2rem;min-height:60px}
+.timing .stamp{display:block}
+.timing .num,.timing .quick{display:none}
+.empty{padding:40px 16px;text-align:center;color:var(--mute)}
+
+/* ── 總覽 ── */
+#viewOv{padding:8px 12px 20px}
+.panel{background:#fff;border:1px solid var(--line);border-radius:var(--r);padding:10px 12px;margin-bottom:12px}
+.panel h3{margin:0 0 8px;font-size:1.05rem}
+.filters{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.filters label{display:flex;align-items:center;gap:4px;font-size:.9rem;color:var(--mute)}
+.dist{display:flex;height:30px;border-radius:8px;overflow:hidden;background:#e3e7ec}
+.dist>span{display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:.9rem;min-width:0;overflow:hidden}
+.dist .g4{background:var(--g4)} .dist .g3{background:var(--g3)} .dist .g2{background:var(--g2)} .dist .g1{background:var(--g1)}
+.rates{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:6px 16px;margin-top:10px}
+.rate{display:grid;grid-template-columns:minmax(0,1fr) 46px;gap:2px 8px;align-items:center;font-size:.92rem}
+.rate .nm{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rate .bar2{grid-column:1/-1;height:8px;background:#e3e7ec;border-radius:5px;overflow:hidden}
+.rate .bar2 i{display:block;height:100%;background:var(--g3)}
+.names{display:flex;flex-wrap:wrap;gap:6px}
+.names button{min-height:44px}
+.heat-wrap{overflow:auto;max-height:72vh;border:1px solid var(--line);border-radius:10px;background:#fff}
+table.heat{border-collapse:separate;border-spacing:0;font-size:.9rem}
+.heat th,.heat td{border-right:1px solid #edf0f3;border-bottom:1px solid #edf0f3;text-align:center;padding:0}
+.heat thead th{position:sticky;background:#f0f3f8;z-index:2;font-weight:600;padding:4px 4px}
+.heat thead tr:nth-child(1) th{top:0;height:32px}
+.heat thead tr:nth-child(2) th{top:32px;min-width:64px;max-width:84px;font-size:.78rem;line-height:1.15;vertical-align:bottom}
+.heat .sticky1{position:sticky;left:0;z-index:3;background:#fff;text-align:left;min-width:128px;padding:0 8px;white-space:nowrap}
+.heat thead .sticky1{z-index:5;background:#f0f3f8}
+.heat td.cell{height:44px;min-width:64px;font-weight:700;cursor:pointer}
+.cell.g4{background:var(--g4t);color:var(--g4)} .cell.g3{background:var(--g3t);color:#117a37}
+.cell.g2{background:var(--g2t);color:#a35a00} .cell.g1{background:var(--g1t);color:var(--g1)}
+.cell.abs{background:var(--abst);color:var(--mute);font-weight:400;font-size:.8rem}
+.cell.none{color:#c3cad4;font-weight:400}
+.heat td.avg{background:#f7f8fb;min-width:58px;font-weight:700;border-left:2px solid #c9d1de}
+.heat tr.rowflag .sticky1{color:var(--g1);font-weight:700}
+.heat .sno{display:inline-block;width:1.8em;color:var(--mute);font-weight:400}
+.legend{display:flex;gap:6px;flex-wrap:wrap;margin:6px 0}
+
+/* ── 抽屜、對話框、通知 ── */
+#drawer{position:fixed;top:0;right:0;bottom:0;width:min(440px,100%);background:#fff;z-index:60;box-shadow:-6px 0 24px rgba(0,0,0,.2);transform:translateX(105%);transition:transform .2s;overflow:auto;padding:12px}
+#drawer.open{transform:none}
+#drawer h2{margin:0 0 6px}
+.dact{border-top:1px solid var(--line);padding:8px 0}
+.dact .hd{display:flex;gap:8px;align-items:center;font-weight:600}
+.hist{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+.hist .pill small{font-weight:400;color:#333}
+.trend{margin-left:auto;font-size:.9rem}
+.up{color:var(--g3)} .down{color:var(--g1)} .flat{color:var(--mute)}
+#modal{position:fixed;inset:0;z-index:80;background:rgba(15,23,42,.5);display:flex;align-items:center;justify-content:center;padding:16px}
+#modal .box{background:#fff;border-radius:16px;padding:18px;width:min(440px,100%);max-height:90vh;overflow:auto}
+#modal h2{margin:0 0 8px;font-size:1.2rem}
+#modal .fld{display:flex;flex-direction:column;gap:4px;margin:10px 0}
+#modal .fld input{width:100%}
+#modal .acts{display:flex;gap:8px;justify-content:flex-end;margin-top:14px;flex-wrap:wrap}
+.err{color:var(--g1);font-size:.92rem;min-height:1.3em}
+#sync{position:fixed;right:10px;bottom:10px;z-index:70;padding:8px 14px;border-radius:999px;background:#fff;border:1px solid var(--line);box-shadow:0 2px 10px rgba(0,0,0,.15);font-size:.92rem;font-weight:600}
+#sync.ok{color:#117a37} #sync.pend{color:#a35a00;border-color:#e6c14d} #sync.off{color:#fff;background:#667085;border-color:#667085} #sync.bad{color:var(--g1);border-color:#f2b8b8}
+#toast{position:fixed;left:50%;bottom:64px;transform:translateX(-50%);z-index:90;display:flex;flex-direction:column;gap:6px;align-items:center;pointer-events:none}
+#toast div{background:#1f2933;color:#fff;border-radius:10px;padding:8px 14px;font-size:.95rem;box-shadow:0 4px 14px rgba(0,0,0,.3)}
+
+@media print{
+  @page{size:A4 landscape;margin:10mm}
+  body{background:#fff;padding:0;font-size:11px}
+  #top,#viewReg,#sync,#toast,#drawer,#modal,.noprint{display:none!important}
+  #viewOv{display:block!important;padding:0}
+  .panel{break-inside:avoid;border-color:#bbb}
+  .heat-wrap{overflow:visible;max-height:none}
+  .heat thead th,.heat .sticky1{position:static}
+  table.heat{font-size:10px}
+  .heat td.cell{height:22px;min-width:34px}
+  .heat thead tr:nth-child(2) th{min-width:34px;max-width:50px;font-size:8px}
+  *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+}
 </style>
 </head>
 <body>
-
-<div class="app">
-  <div class="topbar" id="topbar"></div>
-  <div class="tabs" id="tabs">
-    <button class="tab-btn active" data-tab="settings">評量設定</button>
-    <button class="tab-btn" data-tab="roster">學生登錄表</button>
-    <button class="tab-btn" data-tab="stats">班級統計</button>
+<header id="top">
+  <div class="bar">
+    <nav class="tabs"><button data-view="reg" class="on">登記</button><button data-view="ov">總覽</button></nav>
+    <span class="grow"></span>
+    <button id="btnRefresh" title="重新載入名單、活動與成績" aria-label="重新整理">↻</button>
+    <button id="btnMenu" title="設定" aria-label="設定">⚙</button>
   </div>
+  <div id="regHead"></div>
+</header>
 
-  <div class="panel active" id="panel-settings"></div>
-  <div class="panel" id="panel-roster"></div>
-  <div class="panel" id="panel-stats"></div>
+<main id="viewReg">
+  <div id="regFilters"></div>
+  <div id="progress"></div>
+  <div id="tools"></div>
+  <div id="timer"></div>
+  <div id="grid"></div>
+</main>
+<main id="viewOv" hidden></main>
 
-  <footer class="notice">
-    <b>資料保存說明:</b> 本機一律先存瀏覽器(localStorage)當離線備援。設定好右上角「雲端同步」的網址與金鑰後:
-    學生名單請直接在 Google Sheet「學生名冊」分頁維護,按「同步名單」拉取到這個網頁;評量設定、出席狀態、分數則是<b>您在網頁上操作時就會自動即時存到後端</b>(Google Sheet 的「單元設定／出席與備註／成績資料」三個分頁),不用手動上傳。
-    未設定雲端同步前,資料不會離開這台裝置。此版本的金鑰保護屬於基本防護,不是正式校務系統等級的存取控制,學生成績仍屬敏感資料,請勿公開分享網址與金鑰。
-  </footer>
-</div>
-
-<div id="modal-root"></div>
-<div id="toast-root"></div>
+<aside id="drawer" aria-label="學生詳情"></aside>
+<div id="sync" class="pend">載入中…</div>
+<div id="toast"></div>
+<div id="modal" hidden></div>
 
 <script>
-(function(){
-"use strict";
+(() => {
+'use strict';
 
-/* ---------- constants ---------- */
-var ATTEND = ['出席','缺席待補測','請假','免測','已補測'];
-var ATTEND_BADGE = {'出席':'muted','缺席待補測':'warn','請假':'info','免測':'info','已補測':'ok'};
-var MAX_STUDENTS = 25;
-var STORE_KEY = 'pe_grades_v1';
+/* ════════ 設定 ════════
+ * 後端網址：部署 Apps Script 後，把「網頁應用程式網址」貼在下面引號內，所有裝置就不用再輸入。
+ * 留空也可以：第一次開啟時網頁會請您輸入，並記在這台裝置。
+ * 這是網址而非機密；真正的保護是「教師通行碼」。請勿把學生名單提交進 GitHub。 */
+const DEFAULT_API = '';
 
-var DEFAULT_ITEMS = [
-  {name:'技能表現(動作協調度)', type:'level', weight:30, config:{levels:[{label:'優良',score:95},{label:'達標',score:80},{label:'待加強',score:60}]}},
-  {name:'體能表現(立定跳遠,公分,越多越好)', type:'metric', weight:30, config:{unit:'公分', best:140, pass:90, direction:'high'}},
-  {name:'參與合作', type:'level', weight:20, config:{levels:[{label:'優良',score:95},{label:'達標',score:80},{label:'待加強',score:60}]}},
-  {name:'努力與進步', type:'level', weight:20, config:{levels:[{label:'優良',score:95},{label:'達標',score:80},{label:'待加強',score:60}]}}
-];
+const LS = { auth: 'pe1.auth', cache: 'pe1.cache', queue: 'pe1.queue', ui: 'pe1.ui' };
+const LV = { 4: { t: '優', full: '優異', icon: '🌟' }, 3: { t: '達成', full: '達成', icon: '👍' }, 2: { t: '接近', full: '接近', icon: '🙂' }, 1: { t: '需加油', full: '需加油', icon: '💪' } };
 
-/* ---------- state ---------- */
-var state = null;
-var lastSnapshot = null; // single-step undo
-var activeTab = 'settings';
+const $ = (s, r = document) => r.querySelector(s);
+const lsGet = (k, d) => { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch { return d; } };
+const lsSet = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch { /* 隱私模式 */ } };
+function h(tag, a, ...kids) {
+  const e = document.createElement(tag);
+  if (a) for (const k in a) {
+    const v = a[k]; if (v == null || v === false) continue;
+    if (k === 'class') e.className = v;
+    else if (k === 'dataset') Object.assign(e.dataset, v);
+    else if (k.startsWith('on')) e.addEventListener(k.slice(2), v);
+    else if (k === 'value') e.value = v;
+    else e.setAttribute(k, v === true ? '' : v);
+  }
+  for (const c of kids.flat(2)) if (c != null && c !== false) e.append(c.nodeType ? c : String(c));
+  return e;
+}
+const pad = n => String(n).padStart(2, '0');
+const todayStr = () => { const d = new Date(); return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`; };
+const K = (date, cls, no, aid) => `${date}|${cls}|${no}|${aid}`;
+const fmt1 = n => (n == null ? '–' : (Math.round(n * 10) / 10).toString());
+const fmtMD = d => `${Number(d.slice(5, 7))}/${Number(d.slice(8, 10))}`;
+const mean = a => a.length ? a.reduce((x, y) => x + y, 0) / a.length : null;
 
-function uid(p){ return p + '_' + Math.random().toString(36).slice(2,9); }
+/* ════════ 狀態 ════════ */
+const S = {
+  cfg: { activities: [], units: [], categories: [] }, classes: {}, classOrder: [],
+  scores: new Map(),              // key → rec {date,cls,no,aid,value,grade,absent,note,detail}
+  queue: new Map(),               // key → {rec, seq}  待送出
+  seq: 0, syncing: false, online: navigator.onLine !== false, lastErr: '', booted: false, loading: false
+};
+let auth = lsGet(LS.auth, { url: '', key: '' });
+const ui = Object.assign({
+  view: 'reg', cls: '', date: todayStr(), cat: '', unit: '', aid: '', onlyTodo: false,
+  o: { cat: '', unit: '', from: '', to: '', sort: 'seat', aid: '' }
+}, lsGet(LS.ui, {}));
+ui.date = todayStr();            // 每次開啟預設今天
+ui.onlyTodo = false;
+const saveUi = () => lsSet(LS.ui, ui);
+const timer = { t0: null, tick: null };
 
-function defaultState(){
-  var classId = uid('cls');
-  var unitId = uid('unit');
-  var studentsSeed = [
-    ['01','王小明'],['02','陳小美'],['03','林大華'],['04','張美玲'],['05','李俊傑'],
-    ['06','黃淑芬'],['07','吳建宏'],['08','蔡雅婷']
-  ];
-  var students = studentsSeed.map(function(s){ return {id:uid('stu'), classId:classId, seat:s[0], name:s[1]}; });
-  var items = DEFAULT_ITEMS.map(function(it){ return Object.assign({id:uid('item'), order:0}, it); });
-  items.forEach(function(it,i){ it.order = i; });
-  var attendance = {}, notes = {}, records = {};
-  students.forEach(function(stu, idx){
-    var key = unitId+'|'+stu.id;
-    attendance[key] = idx === students.length-1 ? '缺席待補測' : '出席';
+/* ════════ 等級規則（與 Code.gs 相同） ════════ */
+function gradeOf(act, v) {
+  if (v == null || v === '' || isNaN(v) || !act) return null;
+  v = Number(v);
+  if (act.mode === 'level') return Math.min(4, Math.max(1, Math.round(v)));
+  if (act.t4 == null || act.t3 == null || act.t2 == null) return null;
+  if (act.dir === '低') return v <= act.t4 ? 4 : v <= act.t3 ? 3 : v <= act.t2 ? 2 : 1;
+  return v >= act.t4 ? 4 : v >= act.t3 ? 3 : v >= act.t2 ? 2 : 1;
+}
+const actById = id => S.cfg.activities.find(a => a.id === id);
+const enabledActs = () => S.cfg.activities.filter(a => a.on);
+const done = r => !!r && (r.absent || r.grade != null);
+const students = () => S.classes[ui.cls] || [];
+const unitLabel = id => { if (!id) return '不屬於單元'; const u = S.cfg.units.find(x => x.id === id); return u ? `${u.id} ${u.name}` : id; };
+const catsWithActs = () => S.cfg.categories.filter(c => enabledActs().some(a => a.cat === c));
+function thrText(a) {
+  if (a.mode === 'level') return [['g4', '🌟優異'], ['g3', '👍達成'], ['g2', '🙂接近'], ['g1', '💪需加油']];
+  if (a.t4 == null) return [];
+  const op = a.mode === 'checklist' ? '≥' : (a.dir === '低' ? '≤' : '≥');
+  const u = a.mode === 'checklist' ? '項' : a.uom;
+  return [['g4', `優 ${op}${a.t4}${u}`], ['g3', `達成 ${op}${a.t3}${u}`], ['g2', `接近 ${op}${a.t2}${u}`]];
+}
+
+/* ════════ 本機快取與同步佇列 ════════ */
+const toRow = r => [r.date, r.cls, r.no, r.aid, r.value, r.grade, r.absent ? 1 : 0, r.note || '', r.detail || ''];
+const fromRow = a => ({ date: a[0], cls: String(a[1]), no: Number(a[2]), aid: String(a[3]), value: a[4], grade: a[5], absent: !!a[6], note: a[7] || '', detail: a[8] || '' });
+let cacheTimer = 0;
+function saveCacheSoon() { clearTimeout(cacheTimer); cacheTimer = setTimeout(saveCache, 800); }
+function saveCache() {
+  clearTimeout(cacheTimer);
+  lsSet(LS.cache, { cfg: S.cfg, classes: S.classes, classOrder: S.classOrder, scores: [...S.scores.values()].map(toRow), at: Date.now() });
+}
+const saveQueue = () => lsSet(LS.queue, [...S.queue.values()]);
+
+function enqueue(key, rec) {
+  S.queue.set(key, { rec, seq: ++S.seq });
+  saveQueue(); saveCacheSoon(); scheduleFlush(1200); renderSync();
+}
+let flushTimer = 0, retryDelay = 0;
+function scheduleFlush(ms) { clearTimeout(flushTimer); flushTimer = setTimeout(flush, ms); }
+
+async function callApi(body, opts = {}) {
+  const url = DEFAULT_API || auth.url;
+  if (!url) throw new Error('尚未設定後端網址');
+  const ctl = new AbortController(); const to = setTimeout(() => ctl.abort(), opts.timeout || 25000);
+  try {
+    const r = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ ...body, key: auth.key }), signal: ctl.signal, redirect: 'follow', keepalive: !!opts.keepalive });
+    if (!r.ok) throw new Error('伺服器回應 ' + r.status);
+    return await r.json();
+  } finally { clearTimeout(to); }
+}
+
+async function flush() {
+  clearTimeout(flushTimer);
+  if (S.syncing || !S.queue.size) { renderSync(); return; }
+  if (!S.online) { renderSync(); return; }
+  S.syncing = true; renderSync();
+  const batch = [...S.queue.entries()].slice(0, 300);
+  let ok = false;
+  try {
+    const res = await callApi({ action: 'save', records: batch.map(([, q]) => q.rec) });
+    if (res.error === 'auth') { S.lastErr = '通行碼錯誤'; showLogin('通行碼不正確，請重新輸入'); throw new Error('auth'); }
+    if (!res.ok) throw new Error(res.error || '寫入失敗');
+    for (const [k, q] of batch) { const cur = S.queue.get(k); if (cur && cur.seq === q.seq) S.queue.delete(k); }
+    saveQueue();
+    if (res.rejected && res.rejected.length) toast(`有 ${res.rejected.length} 筆資料格式不完整，已略過`);
+    S.lastErr = ''; retryDelay = 0; ok = true;
+  } catch (e) {
+    if (e.message !== 'auth') S.lastErr = e.name === 'AbortError' ? '連線逾時' : e.message;
+    retryDelay = Math.min(retryDelay ? retryDelay * 2 : 4000, 30000);
+  } finally {
+    S.syncing = false; renderSync();
+    if (S.queue.size) scheduleFlush(ok ? 300 : retryDelay);
+  }
+}
+window.addEventListener('online', () => { S.online = true; renderSync(); flush(); if (!S.booted) bootstrap(); });
+window.addEventListener('offline', () => { S.online = false; renderSync(); });
+function leaving() { saveCache(); saveQueue(); if (S.queue.size && S.online && !S.syncing) { try { callApi({ action: 'save', records: [...S.queue.values()].map(q => q.rec) }, { keepalive: true }).catch(() => { }); } catch { } } }
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') leaving(); else if (S.queue.size) flush(); });
+window.addEventListener('pagehide', leaving);
+
+function renderSync() {
+  const el = $('#sync'), n = S.queue.size;
+  let cls = 'ok', t = '已同步 ✓';
+  if (!S.online) { cls = 'off'; t = n ? `離線 · 待同步 ${n} 筆` : '離線'; }
+  else if (S.syncing) { cls = 'pend'; t = `同步中… ${n} 筆`; }
+  else if (n && S.lastErr) { cls = 'bad'; t = `待同步 ${n} 筆（${S.lastErr}，自動重試）`; }
+  else if (n) { cls = 'pend'; t = `待同步 ${n} 筆`; }
+  else if (S.loading) { cls = 'pend'; t = '載入中…'; }
+  el.className = cls; el.textContent = t;
+}
+
+/* ════════ 載入 ════════ */
+function applyBoot(j) {
+  S.cfg = j.cfg; S.classes = j.classes || {}; S.classOrder = j.classOrder || Object.keys(S.classes);
+  S.scores = new Map();
+  for (const a of j.scores || []) { const r = fromRow(a); S.scores.set(K(r.date, r.cls, r.no, r.aid), r); }
+  overlayQueue();
+}
+function overlayQueue() {           // 尚未送出的本機修改優先於伺服器資料
+  for (const [key, q] of S.queue) {
+    const r = q.rec;
+    if (r.del) { S.scores.delete(key); continue; }
+    const act = actById(r.aid);
+    S.scores.set(key, { date: r.date, cls: String(r.cls), no: r.no, aid: r.aid, value: r.absent ? null : r.value, grade: r.absent ? null : gradeOf(act, r.value), absent: !!r.absent, note: r.note || '', detail: r.detail || '' });
+  }
+}
+function loadCache() {
+  const c = lsGet(LS.cache, null);
+  if (!c || !c.cfg) return false;
+  applyBoot({ cfg: c.cfg, classes: c.classes, classOrder: c.classOrder, scores: c.scores });
+  return true;
+}
+async function bootstrap(manual) {
+  if (!DEFAULT_API && !auth.url || !auth.key) { showLogin(); return; }
+  if (!S.online) { renderSync(); if (manual) toast('目前離線，無法重新整理'); return; }
+  S.loading = true; renderSync();
+  try {
+    const j = await callApi({ action: 'bootstrap' });
+    if (j.error === 'auth') { showLogin('通行碼不正確，請重新輸入'); return; }
+    if (!j.ok) throw new Error(j.error || '載入失敗');
+    applyBoot(j); S.booted = true; saveCache();
+    renderAll(); if (manual) toast('已更新');
+    flush();
+  } catch (e) {
+    toast('載入失敗：' + (e.name === 'AbortError' ? '連線逾時' : e.message) + (S.booted ? '（使用本機資料）' : ''));
+    if (!S.booted && !S.cfg.activities.length) $('#grid').replaceChildren(h('div', { class: 'empty' }, '連不上後端。請檢查網路或網址，再按右上角 ↻。'));
+  } finally { S.loading = false; renderSync(); }
+}
+
+/* ════════ 提示、對話框 ════════ */
+function toast(msg) {
+  const box = $('#toast'), d = h('div', null, msg); box.append(d);
+  setTimeout(() => d.remove(), 2600);
+}
+function modal(build) {
+  const m = $('#modal'); m.hidden = false;
+  const close = () => { m.hidden = true; m.replaceChildren(); };
+  m.replaceChildren(h('div', { class: 'box', role: 'dialog' }, build(close)));
+  return close;
+}
+function ask(title, text, okLabel = '確定', danger = false) {
+  return new Promise(res => modal(close => [
+    h('h2', null, title), h('p', null, text),
+    h('div', { class: 'acts' },
+      h('button', { onclick: () => { close(); res(false); } }, '取消'),
+      h('button', { class: danger ? 'danger' : 'primary', onclick: () => { close(); res(true); } }, okLabel))
+  ]));
+}
+function showLogin(msg) {
+  modal(close => {
+    const url = h('input', { type: 'text', placeholder: 'https://script.google.com/macros/s/…/exec', value: auth.url, autocomplete: 'off', inputmode: 'url' });
+    const key = h('input', { type: 'password', placeholder: '教師通行碼', value: auth.key, autocomplete: 'current-password' });
+    const err = h('div', { class: 'err' }, msg || '');
+    const go = () => {
+      auth = { url: (url.value || auth.url || '').trim(), key: key.value.trim() };
+      if ((!DEFAULT_API && !auth.url) || !auth.key) { err.textContent = '請輸入' + (DEFAULT_API ? '通行碼' : '網址與通行碼'); return; }
+      lsSet(LS.auth, auth); close(); bootstrap();
+    };
+    key.addEventListener('keydown', e => { if (e.key === 'Enter') go(); });
+    return [h('h2', null, '🔒 教師登入'), h('p', { style: 'color:var(--mute);margin:0' }, '輸入後會記在這台裝置，下次不用再輸入。'),
+      DEFAULT_API ? null : h('div', { class: 'fld' }, h('label', null, '後端網址'), url),
+      h('div', { class: 'fld' }, h('label', null, '通行碼'), key), err,
+      h('div', { class: 'acts' }, h('button', { class: 'primary', onclick: go }, '進入'))];
   });
-  return {
-    classes:[{id:classId, year:'115', term:'1', grade:'一年級', cls:'1班', teacher:'範例教師', classKey:'115-1-一年級-1班'}],
-    units:[{id:unitId, classId:classId, name:'基本動作-立定跳遠', week:'第3週', items:items}],
-    students: students,
-    attendance: attendance,
-    notes: notes,
-    records: records,
-    activeClassId: classId,
-    activeUnitId: unitId
+}
+function showMenu() {
+  modal(close => [h('h2', null, '設定'),
+    h('div', { style: 'display:flex;flex-direction:column;gap:8px' },
+      h('button', { onclick: () => { close(); bootstrap(true); } }, '↻ 重新載入名單、活動與成績'),
+      h('button', { onclick: () => { close(); showLogin(); } }, '🔑 更換網址／通行碼'),
+      h('button', { class: 'danger', onclick: async () => {
+        close();
+        if (S.queue.size && !(await ask('還有未同步的資料', `仍有 ${S.queue.size} 筆待同步，清除後會遺失。確定清除本機快取？`, '清除', true))) return;
+        localStorage.removeItem(LS.cache); localStorage.removeItem(LS.queue); S.queue.clear(); toast('已清除本機快取'); bootstrap(true);
+      } }, '🧹 清除本機快取'),
+      h('button', { class: 'danger', onclick: () => { close(); localStorage.removeItem(LS.auth); auth = { url: '', key: '' }; S.booted = false; showLogin(); } }, '🚪 登出（忘記通行碼）')),
+    h('p', { style: 'color:var(--mute);font-size:.88rem' }, '成績門檻為暫定建議值，可依班級實際情況調整：直接在 Google Sheet「活動設定」分頁修改，再按 ↻。'),
+    h('div', { class: 'acts' }, h('button', { onclick: close }, '關閉'))]);
+}
+
+/* ════════ 登記頁 ════════ */
+function ensureSelection() {
+  if (!S.classOrder.includes(ui.cls)) ui.cls = S.classOrder[0] || '';
+  const acts = regActs();
+  if (!acts.some(a => a.id === ui.aid)) ui.aid = acts[0] ? acts[0].id : '';
+}
+function regActs() {
+  return enabledActs().filter(a => (!ui.cat || a.cat === ui.cat) && (!ui.unit || (ui.unit === '__none' ? !a.unit : a.unit === ui.unit)));
+}
+const curAct = () => actById(ui.aid);
+
+function renderHead() {
+  ensureSelection();
+  const clsSel = h('select', { 'aria-label': '班級', onchange: e => { ui.cls = e.target.value; saveUi(); renderAll(); } },
+    S.classOrder.map(c => h('option', { value: c, selected: c === ui.cls }, c)));
+  const date = h('input', { type: 'date', value: ui.date, 'aria-label': '日期', onchange: e => { if (e.target.value) { ui.date = e.target.value; renderCards(); } } });
+  const cats = [h('button', { class: 'chip' + (!ui.cat ? ' on' : ''), onclick: () => { ui.cat = ''; saveUi(); renderRegAll(); } }, '全部')]
+    .concat(catsWithActs().map(c => h('button', { class: 'chip' + (ui.cat === c ? ' on' : ''), onclick: () => { ui.cat = c; saveUi(); renderRegAll(); } }, c)));
+  const unitIds = [...new Set(enabledActs().map(a => a.unit))];
+  const unitSel = h('select', { class: 'unitsel', 'aria-label': '依單元篩選', onchange: e => { ui.unit = e.target.value; saveUi(); renderRegAll(); } },
+    h('option', { value: '' }, '全部單元'),
+    unitIds.filter(Boolean).sort(unitSort).map(u => h('option', { value: u, selected: ui.unit === u }, unitLabel(u))),
+    unitIds.includes('') ? h('option', { value: '__none', selected: ui.unit === '__none' }, '不屬於單元（自訂）') : null);
+  const acts = regActs();
+  const actSel = h('select', { 'aria-label': '活動', style: 'flex:1;min-width:180px', onchange: e => { ui.aid = e.target.value; stopTimer(); saveUi(); renderRegAll(); } },
+    acts.length ? acts.map(a => h('option', { value: a.id, selected: a.id === ui.aid }, `${a.icon} ${a.name}`)) : h('option', null, '（此篩選下沒有活動）'));
+  const a = curAct();
+  const goal = a ? h('div', { class: 'goal' },
+    h('b', null, `${a.icon} ${a.name}：`), h('b', null, a.goal || '（尚未填目標說明）'),
+    h('div', { class: 'thr' }, thrText(a).map(([g, t]) => h('span', { class: 'pill ' + g }, t)),
+      a.mode === 'checklist' ? h('span', { class: 'pill' }, `共 ${a.items.length} 項，勾選項數換算等級`) : null,
+      a.dir === '低' && a.mode !== 'level' ? h('span', { class: 'pill' }, '越小越好') : null)) : null;
+  $('#regHead').replaceChildren(h('div', { class: 'row' }, clsSel, date, actSel), goal);
+  $('#regFilters').replaceChildren(h('div', { class: 'chips' }, cats), h('div', { class: 'row' }, unitSel));
+}
+function unitSort(x, y) { const k = u => (u.startsWith('健') ? 1000 : 0) + parseFloat(u.replace('健', '').replace('-', '.')); return k(x) - k(y); }
+
+function renderRegAll() { renderHead(); renderCards(); }
+
+function renderCards() {
+  const grid = $('#grid'), act = curAct(), list = students();
+  if (!S.classOrder.length) { grid.replaceChildren(h('div', { class: 'empty' }, S.booted || S.cfg.activities.length ? '尚無班級。請到 Google Sheet 的「班級名單」分頁填入班級、座號、姓名，然後按右上角 ↻。' : '載入中…')); renderProgress(); renderTools(); return; }
+  if (!act) { grid.replaceChildren(h('div', { class: 'empty' }, '沒有可登記的活動。請調整上方篩選，或到 Google Sheet「活動設定」把「啟用」改成 Y。')); renderProgress(); renderTools(); return; }
+  const ctx = { date: ui.date, cls: ui.cls, aid: act.id };
+  const frag = document.createDocumentFragment();
+  for (const stu of list) frag.append(buildCard(stu, act, ctx));
+  grid.replaceChildren(frag);
+  grid.classList.toggle('timing', !!timer.t0);
+  if (ui.onlyTodo) applyTodoFilter();
+  renderProgress(); renderTools();
+}
+
+/* 修改一筆成績（樂觀更新：立刻寫進記憶體與佇列，不等伺服器） */
+function edit(ctx, act, no, fn) {
+  const key = K(ctx.date, ctx.cls, no, act.id), old = S.scores.get(key);
+  const d = old ? { ...old } : { date: ctx.date, cls: ctx.cls, no, aid: act.id, value: null, grade: null, absent: false, note: '', detail: '' };
+  fn(d);
+  if (d.absent) { d.value = null; d.grade = null; d.detail = ''; } else d.grade = gradeOf(act, d.value);
+  if (!d.absent && d.value == null && !d.note) {
+    if (old) { S.scores.delete(key); enqueue(key, { date: ctx.date, cls: ctx.cls, no, aid: act.id, del: true }); }
+  } else {
+    S.scores.set(key, d);
+    enqueue(key, { date: d.date, cls: d.cls, no, aid: act.id, value: d.value, absent: d.absent, note: d.note, detail: d.detail });
+  }
+  return S.scores.get(key);
+}
+
+function buildCard(stu, act, ctx) {
+  const [no, name] = stu, key = K(ctx.date, ctx.cls, no, act.id);
+  const get = () => S.scores.get(key);
+  const upd = fn => { edit(ctx, act, no, fn); el.refresh(); renderProgress(); };
+  const badge = h('span', { class: 'badge' }, '—');
+  const bAbs = h('button', { class: 'ic abs', 'aria-label': '缺席', onclick: () => upd(d => { d.absent = !d.absent; }) }, '缺席');
+  const bNote = h('button', { class: 'ic note', 'aria-label': '備註', onclick: () => { noteRow.hidden = !noteRow.hidden; if (!noteRow.hidden) noteIn.focus(); } }, '📝');
+  const bClr = h('button', { class: 'ic clr', 'aria-label': '清除', title: '清除這筆', onclick: () => upd(d => { d.value = null; d.absent = false; d.detail = ''; d.note = ''; }) }, '↺');
+  const noteIn = h('input', { type: 'text', placeholder: '備註（例如：腳扭傷、補測）', maxlength: 120, enterkeyhint: 'done',
+    onchange: e => upd(d => { d.note = e.target.value.trim(); }), onkeydown: e => { if (e.key === 'Enter') e.target.blur(); } });
+  const noteRow = h('div', { class: 'noterow', hidden: true }, noteIn);
+  let body, refreshBody;
+
+  if (act.mode === 'count' || act.mode === 'time') {
+    const step = 1;
+    const inp = h('input', { type: 'number', inputmode: 'decimal', step: 'any', min: 0, placeholder: act.uom || '', 'aria-label': `${name}的${act.uom || '數值'}`, enterkeyhint: 'next',
+      oninput: e => { const v = e.target.value === '' ? null : parseFloat(e.target.value); upd(d => { d.value = (v == null || isNaN(v)) ? null : v; }); },
+      onkeydown: e => { if (e.key === 'Enter') { e.preventDefault(); focusNext(el); } } });
+    const bump = dlt => () => { const r = get(); const cur = r && r.value != null ? r.value : 0; upd(d => { d.value = Math.max(0, Math.round((cur + dlt) * 10) / 10); }); };
+    const q = [[act.t4, 'q4', '優'], [act.t3, 'q3', '達成'], [act.t2, 'q2', '接近']].filter(x => x[0] != null)
+      .map(([v, c, t]) => h('button', { class: c, onclick: () => upd(d => { d.value = v; }) }, `${t} ${v}`));
+    const stamp = h('button', { class: 'stamp', onclick: () => {
+      if (!timer.t0) return;
+      const sec = Math.round((performance.now() - timer.t0) / 100) / 10; upd(d => { d.value = sec; });
+    } }, '⏹ 衝線／停止，記下秒數');
+    body = h('div', { class: 'cbody' },
+      h('div', { class: 'num' }, h('button', { 'aria-label': '減一', onclick: bump(-step) }, '−1'), inp, h('button', { 'aria-label': '加一', onclick: bump(step) }, '+1')),
+      h('div', { class: 'quick' }, q), stamp);
+    refreshBody = r => { if (document.activeElement !== inp) inp.value = r && r.value != null ? r.value : ''; };
+  } else if (act.mode === 'checklist') {
+    const btns = act.items.map((t, i) => h('button', { onclick: () => upd(d => {
+      const bits = (d.detail || '').padEnd(act.items.length, '0').split(''); bits[i] = bits[i] === '1' ? '0' : '1';
+      d.detail = bits.join(''); d.value = bits.filter(b => b === '1').length;
+    }) }, t));
+    const cnt = h('div', { style: 'color:var(--mute);font-size:.88rem' });
+    body = h('div', { class: 'cbody' }, h('div', { class: 'ck' }, btns), cnt);
+    refreshBody = r => {
+      const bits = ((r && r.detail) || '').padEnd(act.items.length, '0');
+      btns.forEach((b, i) => b.classList.toggle('on', bits[i] === '1'));
+      cnt.textContent = r && r.value != null ? `已勾 ${r.value}／${act.items.length} 項` : `共 ${act.items.length} 項，點選做到的項目`;
+    };
+  } else {
+    const btns = [4, 3, 2, 1].map(g => h('button', { class: 'g' + g, 'aria-label': LV[g].full, onclick: () => upd(d => { d.value = d.value === g ? null : g; }) }, h('span', null, LV[g].icon), h('span', null, LV[g].t)));
+    body = h('div', { class: 'cbody' }, h('div', { class: 'lv' }, btns));
+    refreshBody = r => btns.forEach((b, i) => b.classList.toggle('on', !!r && r.grade === 4 - i));
+  }
+
+  const el = h('section', { class: 'card', dataset: { no } },
+    h('div', { class: 'chead' }, h('span', { class: 'seat' }, no), h('span', { class: 'sname', title: name }, name), badge, bClr, bAbs, bNote),
+    body, noteRow);
+  el.refresh = () => {
+    const r = get(), g = r && !r.absent ? r.grade : null;
+    el.className = 'card' + (r && r.absent ? ' abs' : g ? ' g' + g : '');
+    badge.className = 'badge' + (g ? ' g' + g : ''); badge.textContent = r && r.absent ? '缺席' : g ? LV[g].t : '—';
+    bAbs.classList.toggle('on', !!(r && r.absent)); bClr.hidden = !r;
+    bNote.classList.toggle('has', !!(r && r.note)); if (document.activeElement !== noteIn) noteIn.value = r ? r.note : '';
+    if (r && r.note && noteRow.hidden) noteRow.hidden = false;
+    refreshBody(r);
   };
+  el.refresh();
+  return el;
+}
+function focusNext(card) {
+  let n = card.nextElementSibling;
+  while (n && n.hasAttribute('data-hide')) n = n.nextElementSibling;
+  const inp = n && n.querySelector('input[type=number]');
+  if (inp) { inp.focus(); inp.select(); inp.scrollIntoView({ block: 'center', behavior: 'smooth' }); } else if (document.activeElement) document.activeElement.blur();
 }
 
-function load(){
-  try{
-    var raw = localStorage.getItem(STORE_KEY);
-    if(raw){ return JSON.parse(raw); }
-  }catch(e){}
-  return defaultState();
-}
-function save(){
-  try{ localStorage.setItem(STORE_KEY, JSON.stringify(state)); }catch(e){}
-}
-function snapshotBeforeChange(){
-  try{ lastSnapshot = JSON.parse(JSON.stringify(state)); }catch(e){ lastSnapshot = null; }
-  renderTopbar(); // refresh undo button enabled state after action completes too
-}
-
-/* ---------- helpers ---------- */
-function byId(arr,id){ return arr.find(function(x){ return x.id===id; }); }
-function activeClass(){ return byId(state.classes, state.activeClassId); }
-function activeUnit(){ return byId(state.units, state.activeUnitId); }
-function classStudents(classId){ return state.students.filter(function(s){ return s.classId===classId; }); }
-function unitsForClass(classId){ return state.units.filter(function(u){ return u.classId===classId; }); }
-function recKey(unitId,studentId,itemId){ return unitId+'|'+studentId+'|'+itemId; }
-function attKey(unitId,studentId){ return unitId+'|'+studentId; }
-
-function clamp(v,lo,hi){ return Math.max(lo, Math.min(hi, v)); }
-
-function computeScore(item, raw){
-  if(raw===undefined || raw===null || raw==='') return {score:null, bad:false, display:''};
-  if(item.type==='score'){
-    var n = Number(raw);
-    if(isNaN(n)) return {score:null, bad:true, display:''};
-    var lo = item.config.min!==undefined?item.config.min:0, hi = item.config.max!==undefined?item.config.max:100;
-    var bad = n<lo || n>hi;
-    return {score:n, bad:bad, display:n+''};
+function renderProgress() {
+  const box = $('#progress'), act = curAct(), list = students();
+  if (!act || !list.length) { box.replaceChildren(); return; }
+  const cnt = { 4: 0, 3: 0, 2: 0, 1: 0, abs: 0 }; let n = 0;
+  for (const [no] of list) {
+    const r = S.scores.get(K(ui.date, ui.cls, no, act.id));
+    if (!done(r)) continue; n++;
+    if (r.absent) cnt.abs++; else cnt[r.grade]++;
   }
-  if(item.type==='level'){
-    var lv = (item.config.levels||[]).find(function(l){ return l.label===raw; });
-    if(!lv) return {score:null, bad:false, display:''};
-    return {score:lv.score, bad:false, display:lv.score+'分'};
+  const pct = list.length ? Math.round(n / list.length * 100) : 0;
+  box.replaceChildren(h('div', { class: 'prog' },
+    h('div', { class: 'progtxt' }, h('b', null, `已登記 ${n}／${list.length}`),
+      [4, 3, 2, 1].map(g => h('span', { class: 'pill g' + g }, `${LV[g].t} ${cnt[g]}`)), h('span', { class: 'pill' }, `缺席 ${cnt.abs}`)),
+    h('div', { class: 'meter' }, h('i', { style: `width:${pct}%` }))));
+}
+
+function renderTools() {
+  const act = curAct(), list = students(), box = $('#tools');
+  if (!act || !list.length) { box.replaceChildren(); return; }
+  const tools = [
+    h('button', { class: ui.onlyTodo ? 'on' : '', onclick: () => { ui.onlyTodo = !ui.onlyTodo; ui.onlyTodo ? applyTodoFilter() : $('#grid').querySelectorAll('[data-hide]').forEach(c => c.removeAttribute('data-hide')); renderTools(); } }, ui.onlyTodo ? '✔ 只看未登記' : '只看未登記'),
+    h('button', { onclick: fillAll }, '未登記全部設為達成'),
+    h('button', { class: 'danger', onclick: clearAll }, '清除本次')];
+  if (act.mode === 'time') tools.push(h('button', { onclick: () => timer.t0 ? stopTimer() : startTimer() }, timer.t0 ? '■ 結束計時' : '⏱ 全班計時模式'));
+  box.className = 'tools'; box.replaceChildren(...tools);
+}
+function applyTodoFilter() {
+  const act = curAct();
+  $('#grid').querySelectorAll('.card').forEach(c => {
+    const r = S.scores.get(K(ui.date, ui.cls, Number(c.dataset.no), act.id));
+    if (done(r)) c.setAttribute('data-hide', ''); else c.removeAttribute('data-hide');
+  });
+}
+async function fillAll() {
+  const act = curAct(), ctx = { date: ui.date, cls: ui.cls, aid: act.id };
+  const todo = students().filter(([no]) => !done(S.scores.get(K(ctx.date, ctx.cls, no, act.id))));
+  if (!todo.length) { toast('全班都已登記'); return; }
+  if (act.mode !== 'level' && act.t3 == null) { toast('這個活動沒有設定「達成」門檻'); return; }
+  if (!(await ask('未登記全部設為達成', `將 ${todo.length} 位尚未登記的學生設為「達成」，再逐一修改例外。`, '設定'))) return;
+  for (const [no] of todo) edit(ctx, act, no, d => {
+    if (act.mode === 'checklist') { const n = Math.min(act.t3, act.items.length); d.detail = '1'.repeat(n).padEnd(act.items.length, '0'); d.value = n; }
+    else d.value = act.mode === 'level' ? 3 : act.t3;
+  });
+  renderCards(); toast(`已設定 ${todo.length} 位為達成`);
+}
+async function clearAll() {
+  const act = curAct(), ctx = { date: ui.date, cls: ui.cls, aid: act.id };
+  const has = students().filter(([no]) => S.scores.has(K(ctx.date, ctx.cls, no, act.id)));
+  if (!has.length) { toast('這次還沒有資料'); return; }
+  if (!(await ask('清除本次登記', `${ui.date}「${act.name}」${has.length} 筆成績（含缺席與備註）會被刪除，無法復原。`, '清除', true))) return;
+  for (const [no] of has) edit(ctx, act, no, d => { d.value = null; d.absent = false; d.note = ''; d.detail = ''; });
+  renderCards();
+}
+function startTimer() {
+  timer.t0 = performance.now();
+  const bar = h('div', { class: 'timerbar' }, h('span', null, '計時中'), h('span', { class: 'clock' }, '0.0'), h('span', null, '學生衝線／停止時，點他卡片上的大按鈕'));
+  $('#timer').replaceChildren(bar);
+  timer.tick = setInterval(() => { bar.querySelector('.clock').textContent = ((performance.now() - timer.t0) / 1000).toFixed(1); }, 100);
+  $('#grid').classList.add('timing'); renderTools();
+}
+function stopTimer() {
+  if (!timer.t0 && !timer.tick) return;
+  clearInterval(timer.tick); timer.t0 = null; timer.tick = null;
+  $('#timer').replaceChildren(); $('#grid').classList.remove('timing'); renderTools();
+}
+
+/* ════════ 總覽頁 ════════ */
+function ovCompute() {
+  const o = ui.o, list = students(), nos = new Set(list.map(s => s[0]));
+  const acts = enabledActs().filter(a => (!o.cat || a.cat === o.cat) && (!o.unit || (o.unit === '__none' ? !a.unit : a.unit === o.unit)));
+  const byId = new Map(acts.map(a => [a.id, a]));
+  const latest = new Map(), touched = new Map(), absOnly = new Map();     // latest: no → Map(aid → rec)
+  for (const r of S.scores.values()) {
+    if (r.cls !== ui.cls || !nos.has(r.no) || !byId.has(r.aid)) continue;
+    if ((o.from && r.date < o.from) || (o.to && r.date > o.to)) continue;
+    if (!touched.has(r.aid)) touched.set(r.aid, new Set()); touched.get(r.aid).add(r.no);
+    if (r.grade == null) { if (r.absent) { if (!absOnly.has(r.no)) absOnly.set(r.no, new Set()); absOnly.get(r.no).add(r.aid); } continue; }
+    let m = latest.get(r.no); if (!m) latest.set(r.no, m = new Map());
+    const prev = m.get(r.aid); if (!prev || r.date > prev.date) m.set(r.aid, r);
   }
-  if(item.type==='metric'){
-    var n2 = Number(raw);
-    if(isNaN(n2)) return {score:null, bad:true, display:''};
-    var best = item.config.best, pass = item.config.pass, dir = item.config.direction;
-    var s;
-    if(dir==='low'){
-      if(best===pass){ s = n2<=best?100:60; }
-      else{ s = 60 + (pass - n2) / (pass - best) * 40; }
-    } else {
-      if(best===pass){ s = n2>=best?100:60; }
-      else{ s = 60 + (n2 - pass) / (best - pass) * 40; }
-    }
-    s = clamp(Math.round(s), 0, 100);
-    return {score:s, bad:false, display:s+'分', outOfRange:false};
+  const cols = acts.filter(a => touched.has(a.id));
+  const colCats = []; for (const a of cols) if (!colCats.includes(a.cat)) colCats.push(a.cat);
+  colCats.sort((x, y) => S.cfg.categories.indexOf(x) - S.cfg.categories.indexOf(y));
+  const ordered = colCats.flatMap(c => cols.filter(a => a.cat === c));
+  const rows = list.map(([no, name]) => {
+    const m = latest.get(no) || new Map();
+    const gs = ordered.map(a => m.has(a.id) ? m.get(a.id).grade : null);
+    const all = gs.filter(g => g != null);
+    const catAvg = colCats.map(c => mean(ordered.map((a, i) => a.cat === c ? gs[i] : null).filter(g => g != null)));
+    const avg = mean(all), ones = all.filter(g => g === 1).length;
+    return { no, name, gs, catAvg, avg, ones, flag: all.length > 0 && (avg < 2 || ones >= 2), abs: absOnly.get(no) || new Set() };
+  });
+  return { list, acts, ordered, colCats, rows, touched };
+}
+
+function renderOverview() {
+  const box = $('#viewOv'), o = ui.o;
+  if (!S.classOrder.length) { box.replaceChildren(h('div', { class: 'empty' }, '尚無班級資料。')); return; }
+  const D = ovCompute();
+  const clsSel = h('select', { 'aria-label': '班級', onchange: e => { ui.cls = e.target.value; saveUi(); renderAll(); } }, S.classOrder.map(c => h('option', { value: c, selected: c === ui.cls }, c)));
+  const catSel = h('select', { 'aria-label': '類別', onchange: e => { o.cat = e.target.value; renderOverview(); } }, h('option', { value: '' }, '全部類別'), catsWithActs().map(c => h('option', { value: c, selected: o.cat === c }, c)));
+  const unitIds = [...new Set(enabledActs().map(a => a.unit))];
+  const unitSel = h('select', { 'aria-label': '單元', onchange: e => { o.unit = e.target.value; renderOverview(); } }, h('option', { value: '' }, '全部單元'),
+    unitIds.filter(Boolean).sort(unitSort).map(u => h('option', { value: u, selected: o.unit === u }, unitLabel(u))), unitIds.includes('') ? h('option', { value: '__none', selected: o.unit === '__none' }, '不屬於單元') : null);
+  const from = h('input', { type: 'date', value: o.from, 'aria-label': '起日', onchange: e => { o.from = e.target.value; renderOverview(); } });
+  const to = h('input', { type: 'date', value: o.to, 'aria-label': '迄日', onchange: e => { o.to = e.target.value; renderOverview(); } });
+  const sortSel = h('select', { 'aria-label': '排序', onchange: e => { o.sort = e.target.value; renderOverview(); } },
+    [['seat', '依座號'], ['need', '需關注在前'], ['best', '表現好在前']].map(([v, t]) => h('option', { value: v, selected: o.sort === v }, t)));
+
+  // 分布與達成率
+  const cells = D.rows.flatMap(r => r.gs.filter(g => g != null));
+  const tot = cells.length, cnt = g => cells.filter(x => x === g).length, avgAll = mean(cells);
+  const dist = h('div', { class: 'dist', role: 'img', 'aria-label': '全班等級分布' }, [4, 3, 2, 1].map(g => cnt(g) ? h('span', { class: 'g' + g, style: `flex:${cnt(g)}` }, `${LV[g].t} ${cnt(g)}`) : null));
+  const rates = D.ordered.map((a, i) => {
+    const gs = D.rows.map(r => r.gs[i]).filter(g => g != null), ok = gs.filter(g => g >= 3).length;
+    const p = gs.length ? Math.round(ok / gs.length * 100) : 0;
+    return h('div', { class: 'rate', title: `${a.name}：${ok}/${gs.length}` }, h('span', { class: 'nm' }, `${a.icon} ${a.name}`), h('b', null, gs.length ? p + '%' : '–'),
+      h('div', { class: 'bar2' }, h('i', { style: `width:${p}%` })));
+  });
+  const p1 = h('div', { class: 'panel' }, h('h3', null, `全班狀況　平均 ${fmt1(avgAll)}（共 ${tot} 筆有效成績）`),
+    tot ? dist : h('div', { class: 'empty', style: 'padding:12px' }, '這個篩選條件下還沒有成績'),
+    D.ordered.length ? [h('h3', { style: 'margin:12px 0 0' }, '各活動達成率（等級 ≥ 3）'), h('div', { class: 'rates' }, rates)] : null);
+
+  // 需要關注
+  const flagged = D.rows.filter(r => r.flag).sort((a, b) => a.avg - b.avg);
+  const p2 = h('div', { class: 'panel' }, h('h3', null, `需要關注（${flagged.length}）　平均低於 2，或 2 項以上只得 1 級`),
+    flagged.length ? h('div', { class: 'names' }, flagged.map(r => h('button', { onclick: () => openDrawer(r.no) }, `${r.no} ${r.name}｜平均 ${fmt1(r.avg)}｜需加油 ${r.ones} 項`))) : h('span', { style: 'color:var(--mute)' }, '目前沒有需要特別關注的學生 👍'));
+
+  // 尚未登記
+  const actsForPick = D.acts;
+  if (!actsForPick.some(a => a.id === o.aid)) o.aid = actsForPick[0] ? actsForPick[0].id : '';
+  const pick = h('select', { 'aria-label': '選擇活動', onchange: e => { o.aid = e.target.value; renderOverview(); } }, actsForPick.map(a => h('option', { value: a.id, selected: a.id === o.aid }, `${a.icon} ${a.name}`)));
+  const have = D.touched.get(o.aid) || new Set(), missing = D.list.filter(([no]) => !have.has(no));
+  const p3 = h('div', { class: 'panel' }, h('h3', null, '尚未登記'), h('div', { class: 'row', style: 'padding:0 0 8px' }, pick, h('span', { class: 'pill' }, `${missing.length} 人`)),
+    missing.length ? h('div', { class: 'names' }, missing.map(([no, name]) => h('span', { class: 'pill', style: 'padding:6px 12px;font-size:.95rem' }, `${no} ${name}`))) : h('span', { style: 'color:var(--mute)' }, '全班都已登記 ✓'));
+
+  // 熱力圖
+  const rows = D.rows.slice();
+  if (o.sort === 'need') rows.sort((a, b) => (a.avg ?? 99) - (b.avg ?? 99) || a.no - b.no);
+  else if (o.sort === 'best') rows.sort((a, b) => (b.avg ?? -1) - (a.avg ?? -1) || a.no - b.no);
+  const grp = D.colCats.map(c => h('th', { colspan: D.ordered.filter(a => a.cat === c).length }, c));
+  const thead = h('thead', null,
+    h('tr', null, h('th', { class: 'sticky1', rowspan: 2 }, '座號 姓名'), grp, h('th', { colspan: D.colCats.length + 1, style: 'border-left:2px solid #c9d1de' }, '平均')),
+    h('tr', null, D.ordered.map(a => h('th', { title: a.goal }, `${a.icon}${a.name.length > 9 ? a.name.slice(0, 9) + '…' : a.name}`)),
+      D.colCats.map((c, i) => h('th', { style: i === 0 ? 'border-left:2px solid #c9d1de' : '' }, c)), h('th', null, '總平均')));
+  const tbody = h('tbody', null, rows.map(r => h('tr', { class: r.flag ? 'rowflag' : '' },
+    h('td', { class: 'sticky1', onclick: () => openDrawer(r.no), style: 'cursor:pointer' }, h('span', { class: 'sno' }, r.no), r.name),
+    r.gs.map((g, i) => {
+      const a = D.ordered[i], ab = g == null && r.abs.has(a.id);
+      return h('td', { class: 'cell ' + (g ? 'g' + g : ab ? 'abs' : 'none'), onclick: () => openDrawer(r.no), title: `${r.name}・${a.name}` }, g ? g : ab ? '缺' : '·');
+    }),
+    r.catAvg.map((v, i) => h('td', { class: 'avg', style: i === 0 ? '' : 'border-left:1px solid #edf0f3' }, fmt1(v))),
+    h('td', { class: 'avg', style: 'border-left:1px solid #edf0f3' }, h('b', null, fmt1(r.avg))))));
+  const colAvg = h('tr', null, h('td', { class: 'sticky1', style: 'font-weight:700' }, '全班平均'),
+    D.ordered.map((a, i) => h('td', { class: 'avg', style: 'border-left:0' }, fmt1(mean(D.rows.map(r => r.gs[i]).filter(g => g != null))))),
+    D.colCats.map((c, i) => h('td', { class: 'avg', style: i === 0 ? '' : 'border-left:1px solid #edf0f3' }, fmt1(mean(D.rows.map(r => r.catAvg[i]).filter(v => v != null))))),
+    h('td', { class: 'avg', style: 'border-left:1px solid #edf0f3' }, h('b', null, fmt1(mean(D.rows.map(r => r.avg).filter(v => v != null))))));
+  tbody.append(colAvg);
+  const legend = h('div', { class: 'legend' }, [4, 3, 2, 1].map(g => h('span', { class: 'pill g' + g }, `${g} ${LV[g].t}`)), h('span', { class: 'pill' }, '缺＝缺席　·＝未登記　同一活動取最近一次出席成績'));
+  const p4 = h('div', { class: 'panel' }, h('h3', null, '熱力圖'), legend,
+    D.ordered.length ? h('div', { class: 'heat-wrap' }, h('table', { class: 'heat' }, thead, tbody)) : h('div', { class: 'empty', style: 'padding:12px' }, '尚無資料'));
+
+  box.replaceChildren(
+    h('div', { class: 'panel noprint' }, h('div', { class: 'filters' }, clsSel, catSel, unitSel, h('label', null, '從', from), h('label', null, '到', to), sortSel,
+      h('span', { class: 'grow' }), h('button', { onclick: () => window.print() }, '🖨 列印'), h('button', { onclick: exportCsv }, '⬇ 匯出 CSV'))),
+    p1, p2, p3, p4);
+}
+
+function exportCsv() {
+  const o = ui.o, nm = new Map(students());
+  const rows = [['班級', '座號', '姓名', '日期', '類別', '單元', '活動', '原始數值', '單位', '等級', '缺席', '備註']];
+  const recs = [...S.scores.values()].filter(r => r.cls === ui.cls && (!o.from || r.date >= o.from) && (!o.to || r.date <= o.to) && actById(r.aid)).sort((a, b) => a.no - b.no || a.date.localeCompare(b.date));
+  for (const r of recs) {
+    const a = actById(r.aid);
+    if (o.cat && a.cat !== o.cat) continue;
+    rows.push([r.cls, r.no, nm.get(r.no) || '', r.date, a.cat, a.unit, a.name, r.value ?? '', a.mode === 'level' ? '' : a.uom, r.grade ?? '', r.absent ? '缺席' : '', r.note]);
   }
-  if(item.type==='done'){
-    var opt = (item.config.options||[]).find(function(o){ return o.label===raw; });
-    if(!opt) return {score:null, bad:false, display:''};
-    return {score:opt.score, bad:false, display:opt.score+'分'};
-  }
-  return {score:null, bad:false, display:''};
+  const csv = '﻿' + rows.map(r => r.map(v => { v = String(v ?? ''); return /[",\n\r]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; }).join(',')).join('\r\n');
+  const a = h('a', { href: URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' })), download: `體育成績_${ui.cls}_${todayStr()}.csv` });
+  document.body.append(a); a.click(); a.remove(); toast(`已匯出 ${rows.length - 1} 筆`);
 }
 
-function studentUnitResult(unit, studentId){
-  var att = state.attendance[attKey(unit.id, studentId)] || '出席';
-  var items = unit.items;
-  var anyMissing = false, anyBad = false, weighted = 0, totalWeight = 0;
-  items.forEach(function(item){
-    var raw = state.records[recKey(unit.id, studentId, item.id)];
-    var r = computeScore(item, raw);
-    if(r.score===null){ anyMissing = true; }
-    else{
-      weighted += r.score * (item.weight/100);
-      totalWeight += item.weight/100;
-    }
-    if(r.bad) anyBad = true;
-  });
-  var normalAttendance = (att==='出席' || att==='已補測');
-  var status;
-  if(att==='缺席待補測') status = '待補測';
-  else if(att==='請假') status = '請假';
-  else if(att==='免測') status = '免測';
-  else status = anyMissing ? '待登錄' : '已完成';
-  var finalScore = (normalAttendance && !anyMissing) ? Math.round(weighted) : null;
-  return {att:att, status:status, finalScore:finalScore, anyBad:anyBad, countedInStats: status==='已完成'};
+/* 學生詳情抽屜 */
+function openDrawer(no) {
+  const nm = students().find(s => s[0] === no); if (!nm) return;
+  const recs = [...S.scores.values()].filter(r => r.cls === ui.cls && r.no === no && actById(r.aid)).sort((a, b) => a.date.localeCompare(b.date));
+  const byAct = new Map(); for (const r of recs) { if (!byAct.has(r.aid)) byAct.set(r.aid, []); byAct.get(r.aid).push(r); }
+  const acts = [...byAct.keys()].map(actById).sort((a, b) => S.cfg.categories.indexOf(a.cat) - S.cfg.categories.indexOf(b.cat));
+  const lastGs = acts.map(a => { const g = byAct.get(a.id).filter(r => r.grade != null); return g.length ? g[g.length - 1].grade : null; }).filter(g => g != null);
+  const d = $('#drawer');
+  d.replaceChildren(
+    h('div', { style: 'display:flex;align-items:center;gap:8px' }, h('h2', { style: 'flex:1' }, `${no} 號 ${nm[1]}`), h('button', { onclick: () => d.classList.remove('open'), 'aria-label': '關閉' }, '✕')),
+    h('div', { class: 'legend' }, h('span', { class: 'pill' }, `${ui.cls}`), h('span', { class: 'pill' }, `平均 ${fmt1(mean(lastGs))}`), h('span', { class: 'pill' }, `${acts.length} 個活動`)),
+    ...(acts.length ? acts.map(a => {
+      const rs = byAct.get(a.id), gs = rs.filter(r => r.grade != null).map(r => r.grade);
+      let tr = null;
+      if (gs.length >= 2) { const dt = gs[gs.length - 1] - gs[0]; tr = dt > 0 ? h('span', { class: 'trend up' }, `↗ 進步（${gs.join('→')}）`) : dt < 0 ? h('span', { class: 'trend down' }, `↘ 退步（${gs.join('→')}）`) : h('span', { class: 'trend flat' }, `→ 持平（${gs.join('→')}）`); }
+      return h('div', { class: 'dact' }, h('div', { class: 'hd' }, `${a.icon} ${a.name}`, h('small', { style: 'color:var(--mute);font-weight:400' }, a.cat), tr),
+        h('div', { class: 'hist' }, rs.map(r => h('span', { class: 'pill ' + (r.absent ? '' : 'g' + r.grade), title: r.note || '' },
+          fmtMD(r.date), ' ', r.absent ? '缺席' : (a.mode === 'level' ? LV[r.grade].full : h('small', null, `${r.value}${a.mode === 'checklist' ? '項' : a.uom} `), LV[r.grade] ? LV[r.grade].t : ''), r.note ? ' 📝' : ''))),
+        rs.filter(r => r.note).map(r => h('div', { style: 'font-size:.88rem;color:var(--mute);margin-top:4px' }, `${fmtMD(r.date)} 備註：${r.note}`)));
+    }) : [h('div', { class: 'empty' }, '還沒有這位學生的成績')]));
+  d.classList.add('open');
 }
 
-/* ---------- toast / modal ---------- */
-function toast(msg){
-  var root = document.getElementById('toast-root');
-  var el = document.createElement('div');
-  el.className = 'toast'; el.textContent = msg;
-  root.innerHTML=''; root.appendChild(el);
-  setTimeout(function(){ if(el.parentNode) el.parentNode.removeChild(el); }, 2200);
+/* ════════ 切換與啟動 ════════ */
+function renderAll() {
+  ensureSelection(); saveUi();
+  document.querySelectorAll('.tabs button').forEach(b => b.classList.toggle('on', b.dataset.view === ui.view));
+  const reg = ui.view === 'reg';
+  $('#viewReg').hidden = !reg; $('#viewOv').hidden = reg; $('#regHead').hidden = !reg;
+  if (reg) renderRegAll(); else renderOverview();
+  renderSync();
 }
+document.querySelectorAll('.tabs button').forEach(b => b.addEventListener('click', () => { ui.view = b.dataset.view; $('#drawer').classList.remove('open'); stopTimer(); renderAll(); }));
+$('#btnRefresh').addEventListener('click', () => bootstrap(true));
+$('#btnMenu').addEventListener('click', showMenu);
+document.addEventListener('keydown', e => { if (e.key === 'Escape') $('#drawer').classList.remove('open'); });
 
-function showModal(opts){
-  // opts: {title, bodyHtml, onMount(container), actions:[{label,primary,danger,onClick}]}
-  var root = document.getElementById('modal-root');
-  root.innerHTML='';
-  var backdrop = document.createElement('div');
-  backdrop.className = 'modal-backdrop';
-  var modal = document.createElement('div');
-  modal.className = 'modal';
-  var h = document.createElement('h3'); h.textContent = opts.title;
-  modal.appendChild(h);
-  var body = document.createElement('div');
-  body.innerHTML = opts.bodyHtml || '';
-  modal.appendChild(body);
-  var actions = document.createElement('div');
-  actions.className = 'modal-actions';
-  (opts.actions||[]).forEach(function(a){
-    var b = document.createElement('button');
-    b.textContent = a.label;
-    if(a.primary) b.className='primary';
-    if(a.danger) b.className='danger';
-    b.onclick = function(){
-      if(a.onClick) a.onClick(body, closeModal);
-      else closeModal();
-    };
-    actions.appendChild(b);
-  });
-  modal.appendChild(actions);
-  backdrop.appendChild(modal);
-  backdrop.addEventListener('click', function(e){ if(e.target===backdrop) closeModal(); });
-  root.appendChild(backdrop);
-  if(opts.onMount) opts.onMount(body);
-}
-function closeModal(){ document.getElementById('modal-root').innerHTML=''; }
+(function init() {
+  const m = /[#&]api=([^&]+)/.exec(location.hash);          // 可用 …/index.html#api=網址 一次設定新裝置
+  if (m) { try { auth.url = decodeURIComponent(m[1]); lsSet(LS.auth, auth); history.replaceState(null, '', location.pathname + location.search); } catch { } }
+  for (const q of lsGet(LS.queue, [])) if (q && q.rec) { const r = q.rec; S.queue.set(K(r.date, r.cls, r.no, r.aid), { rec: r, seq: ++S.seq }); }
+  const cached = loadCache();
+  renderAll();
+  if (!cached) $('#grid').replaceChildren(h('div', { class: 'empty' }, '載入中…'));
+  bootstrap();
+  if (S.queue.size) scheduleFlush(1500);
+})();
 
-function confirmDanger(message, onConfirm){
-  showModal({
-    title:'請確認',
-    bodyHtml:'<p style="margin:0;color:var(--fg-muted)">'+message+'</p>',
-    actions:[
-      {label:'取消'},
-      {label:'確定刪除', danger:true, onClick:function(_, close){ onConfirm(); close(); }}
-    ]
-  });
-}
-
-/* ---------- top bar ---------- */
-function renderTopbar(){
-  var el = document.getElementById('topbar');
-  var cls = activeClass();
-  var unit = activeUnit();
-  var classOpts = state.classes.map(function(c){
-    return '<option value="'+c.id+'"'+(c.id===state.activeClassId?' selected':'')+'>'+
-      c.year+'學年度 '+c.term+' '+c.grade+c.cls+'</option>';
-  }).join('');
-  var unitList = unitsForClass(state.activeClassId);
-  var unitOpts = unitList.map(function(u){
-    return '<option value="'+u.id+'"'+(u.id===state.activeUnitId?' selected':'')+'>'+u.name+'('+u.week+')</option>';
-  }).join('');
-
-  el.innerHTML =
-    '<div class="topbar-row">'+
-      '<div class="field"><label>班級</label><select id="sel-class">'+classOpts+'</select></div>'+
-      '<div class="field"><label>單元</label><select id="sel-unit">'+unitOpts+'</select></div>'+
-      '<button class="small" id="btn-new-class">新增班級</button>'+
-      '<button class="small" id="btn-new-unit">新增單元</button>'+
-      '<div style="flex:1"></div>'+
-      '<button class="small ghost" id="btn-undo" '+(lastSnapshot?'':'disabled')+'>復原上一步</button>'+
-      '<button class="small ghost danger" id="btn-reset">重置範例資料</button>'+
-      '<button class="small" id="btn-cloud">雲端同步</button>'+
-      (cloudConfigured() ? '<span id="cloud-badge" class="hint">'+escapeHtml(cloudSyncStatus||'未同步')+'</span>' : '')+
-    '</div>'+
-    '<div class="topbar-row hint">'+
-      (cls ? ('任課教師:'+escapeHtml(cls.teacher)+' ・ 學生人數上限 '+MAX_STUDENTS+' 人') : '尚未建立班級') +
-      (unit ? (' ・ 目前單元:'+escapeHtml(unit.name)) : '') +
-    '</div>';
-
-  document.getElementById('sel-class').onchange = function(e){
-    state.activeClassId = e.target.value;
-    var us = unitsForClass(state.activeClassId);
-    state.activeUnitId = us.length ? us[0].id : null;
-    save(); renderAll();
-  };
-  document.getElementById('sel-unit').onchange = function(e){
-    state.activeUnitId = e.target.value; save(); renderAll();
-  };
-  document.getElementById('btn-new-class').onclick = openNewClassModal;
-  document.getElementById('btn-new-unit').onclick = openNewUnitModal;
-  document.getElementById('btn-undo').onclick = function(){
-    if(!lastSnapshot) return;
-    state = lastSnapshot; lastSnapshot = null; save(); renderAll();
-    toast('已復原上一步操作');
-  };
-  document.getElementById('btn-reset').onclick = function(){
-    confirmDanger('這會清除目前所有班級、單元與登錄資料,換回內建的示範資料,確定要重置嗎?', function(){
-      state = defaultState(); lastSnapshot = null; save(); renderAll();
-      toast('已重置為示範資料');
-    });
-  };
-  document.getElementById('btn-cloud').onclick = openCloudSyncModal;
-}
-
-/* ---------- 雲端同步(Google Apps Script 資料庫) ----------
-   設計:「學生名冊」由老師直接在 Google Sheet 維護,前端只「拉取」名單,不會寫入它。
-   評量設定/出席/成績則由前端在每次修改時自動「推送」到後端,老師不用手動上傳/下載整包資料。 */
-var CLOUD_KEY = 'pe_grades_cloud_cfg_v1';
-function loadCloudCfg(){
-  try{ var raw = localStorage.getItem(CLOUD_KEY); if(raw) return JSON.parse(raw); }catch(e){}
-  return {url:'', key:''};
-}
-function saveCloudCfg(cfg){ try{ localStorage.setItem(CLOUD_KEY, JSON.stringify(cfg)); }catch(e){} }
-function cloudConfigured(){ var c = loadCloudCfg(); return !!(c.url && c.key); }
-function unitKeyOf(unit){ return unit.name+'|'+unit.week; }
-
-var cloudSyncStatus = ''; // 顯示在頂部列的小狀態文字
-function setCloudBadge(msg){ cloudSyncStatus = msg; var b = document.getElementById('cloud-badge'); if(b) b.textContent = msg; }
-
-function openCloudSyncModal(){
-  var cfg = loadCloudCfg();
-  var cls = activeClass();
-  showModal({
-    title:'雲端同步(Google Apps Script 資料庫)',
-    bodyHtml:
-      '<p class="hint" style="margin:0">名單請直接在 Google Sheet「學生名冊」分頁維護(班級代碼/座號/姓名),這裡按「同步名單」拉取就好;評量設定、出席、分數會在您操作時自動存到後端,不用手動上傳。詳細部署步驟見 README。</p>'+
-      '<div class="form-grid">'+
-      '<div class="field full"><label>Apps Script 網址(/exec)</label><input type="text" id="f-cloud-url" value="'+escapeHtml(cfg.url)+'" placeholder="https://script.google.com/macros/s/.../exec"></div>'+
-      '<div class="field full"><label>API 金鑰</label><input type="text" id="f-cloud-key" value="'+escapeHtml(cfg.key)+'"></div>'+
-      '</div>'+
-      (cls ? '<p class="hint" style="margin:0">目前班級的雲端班級代碼:<b>'+escapeHtml(cls.classKey||'(未設定)')+'</b></p>' : '')+
-      '<p id="cloud-status" class="hint" style="margin:0"></p>',
-    actions:[
-      {label:'關閉'},
-      {label:'同步名單(從 Sheet 拉取)', primary:true, onClick:function(body){
-        persistCloudCfg(body);
-        pullRosterAndData(body);
-      }}
-    ]
-  });
-}
-function persistCloudCfg(body){
-  var url = body.querySelector('#f-cloud-url').value.trim();
-  var key = body.querySelector('#f-cloud-key').value.trim();
-  saveCloudCfg({url:url, key:key});
-}
-function setCloudStatus(body, msg){
-  var el = body && body.querySelector('#cloud-status');
-  if(el) el.textContent = msg;
-  setCloudBadge(msg);
-}
-
-function pullRosterAndData(body){
-  var cfg = loadCloudCfg();
-  var cls = activeClass();
-  if(!cfg.url || !cfg.key){ setCloudStatus(body,'請先填寫網址與金鑰'); return; }
-  if(!cls || !cls.classKey){ setCloudStatus(body,'請先在「新增班級」設定雲端班級代碼'); return; }
-  setCloudStatus(body, '同步中…');
-  fetch(cfg.url + '?key=' + encodeURIComponent(cfg.key) + '&action=pull&classKey=' + encodeURIComponent(cls.classKey))
-    .then(function(r){ return r.json(); })
-    .then(function(data){
-      if(!data.ok){ setCloudStatus(body, '同步失敗:'+(data.message||data.error||'未知錯誤')); return; }
-      if(data.warning){
-        var avail = (data.availableClassKeys||[]);
-        setCloudStatus(body, data.warning + (avail.length ? ('Sheet 裡目前有的班級代碼:'+avail.join('、')) : '(Sheet 裡目前沒有任何班級代碼)'));
-        return;
-      }
-      confirmDanger('這會用 Google Sheet 上的名單與雲端資料,更新目前班級的學生名冊與單元內容,確定要同步嗎?', function(){
-        snapshotBeforeChange();
-        applyCloudPull(cls, data);
-        save(); renderAll();
-        setCloudBadge('已同步('+(data.roster||[]).length+'位學生)');
-        toast('已從 Google Sheet 同步名單與資料');
-      });
-    }).catch(function(err){ setCloudStatus(body, '連線失敗,請確認網址與部署權限:'+err); });
-}
-
-function applyCloudPull(cls, data){
-  // 1) 名單:以 Sheet 為準,整批覆蓋這個班級的學生(以座號比對,盡量保留本機 id)
-  var oldStudents = classStudents(cls.id);
-  var bySeat = {};
-  oldStudents.forEach(function(s){ bySeat[s.seat] = s; });
-  var newStudents = (data.roster||[]).map(function(r){
-    var old = bySeat[r.seat];
-    return {id: old?old.id:uid('stu'), classId:cls.id, seat:r.seat, name:r.name};
-  });
-  state.students = state.students.filter(function(s){ return s.classId!==cls.id; }).concat(newStudents);
-
-  // 2) 單元設定:以 unitKey(名稱|週次) 比對本機既有單元,沒有就新建
-  (data.units||[]).forEach(function(u){
-    var local = unitsForClass(cls.id).find(function(x){ return unitKeyOf(x)===u.unitKey; });
-    if(!local){
-      local = {id:uid('unit'), classId:cls.id, name:u.name, week:u.week, items:[]};
-      state.units.push(local);
-    }
-    local.name = u.name; local.week = u.week;
-    var oldItemsByName = {}; local.items.forEach(function(it){ oldItemsByName[it.name]=it; });
-    local.items = (u.items||[]).map(function(it, idx){
-      var old = oldItemsByName[it.name];
-      return {id: old?old.id:uid('item'), order:idx, name:it.name, type:it.type, weight:it.weight, config:it.config};
-    });
-
-    // 3) 出席/備註/成績:用 unitKey+座號(+項目名稱)寫回本機的 recKey/attKey(以 local id 表示)
-    newStudents.forEach(function(stu){
-      var a = (data.attendance||{})[u.unitKey+'|'+stu.seat];
-      if(a){
-        state.attendance[attKey(local.id, stu.id)] = a.att;
-        state.notes[attKey(local.id, stu.id)] = a.note;
-      }
-      local.items.forEach(function(item){
-        var raw = (data.records||{})[u.unitKey+'|'+stu.seat+'|'+item.name];
-        if(raw!==undefined && raw!==''){ state.records[recKey(local.id, stu.id, item.id)] = raw; }
-      });
-    });
-  });
-
-  if(!state.activeUnitId || !byId(state.units, state.activeUnitId)){
-    var us = unitsForClass(cls.id);
-    if(us.length) state.activeUnitId = us[0].id;
-  }
-}
-
-/* ---------- 自動推送(前端改資料時即時寫回後端,不需老師手動操作) ---------- */
-function cloudPushUnit(unit){
-  if(!cloudConfigured()) return;
-  var cls = activeClass();
-  if(!cls || !cls.classKey) return;
-  setCloudBadge('同步中…');
-  fetch(loadCloudCfg().url, {method:'POST', body: JSON.stringify({
-    key: loadCloudCfg().key, action:'upsertUnit',
-    classKey: cls.classKey, name: unit.name, week: unit.week,
-    items: unit.items.map(function(it){ return {name:it.name, type:it.type, weight:it.weight, config:it.config}; })
-  })}).then(function(r){return r.json();}).then(function(d){ setCloudBadge(d.ok?'已同步':'同步失敗'); })
-    .catch(function(){ setCloudBadge('連線失敗(評量設定未同步)'); });
-}
-function cloudPushRecord(unit, stu, item, raw){
-  if(!cloudConfigured()) return;
-  var cls = activeClass();
-  if(!cls || !cls.classKey) return;
-  var sc = computeScore(item, raw);
-  setCloudBadge('同步中…');
-  fetch(loadCloudCfg().url, {method:'POST', body: JSON.stringify({
-    key: loadCloudCfg().key, action:'upsertRecord',
-    classKey: cls.classKey, unitKey: unitKeyOf(unit), seat: stu.seat,
-    itemName: item.name, itemType: item.type, weight: item.weight,
-    raw: raw===undefined?'':raw, score: sc.score===null?'':sc.score
-  })}).then(function(r){return r.json();}).then(function(d){ setCloudBadge(d.ok?'已同步':'同步失敗'); })
-    .catch(function(){ setCloudBadge('連線失敗(此筆未同步,仍存在本機)'); });
-}
-function cloudPushAttendance(unit, stu){
-  if(!cloudConfigured()) return;
-  var cls = activeClass();
-  if(!cls || !cls.classKey) return;
-  setCloudBadge('同步中…');
-  fetch(loadCloudCfg().url, {method:'POST', body: JSON.stringify({
-    key: loadCloudCfg().key, action:'upsertAttendance',
-    classKey: cls.classKey, unitKey: unitKeyOf(unit), seat: stu.seat,
-    att: state.attendance[attKey(unit.id,stu.id)]||'出席',
-    note: state.notes[attKey(unit.id,stu.id)]||''
-  })}).then(function(r){return r.json();}).then(function(d){ setCloudBadge(d.ok?'已同步':'同步失敗'); })
-    .catch(function(){ setCloudBadge('連線失敗(此筆未同步,仍存在本機)'); });
-}
-
-function escapeHtml(s){
-  return String(s==null?'':s).replace(/[&<>"']/g, function(c){
-    return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
-  });
-}
-
-function suggestClassKey(y,t,g,c){ return y+'-'+t+'-'+g+'-'+c; }
-
-function openNewClassModal(){
-  showModal({
-    title:'新增班級',
-    bodyHtml:
-      '<div class="form-grid">'+
-      '<div class="field"><label>學年度</label><input type="text" id="f-year" value="115"></div>'+
-      '<div class="field"><label>學期</label><select id="f-term"><option value="1">第一學期</option><option value="2">第二學期</option></select></div>'+
-      '<div class="field"><label>年級</label><input type="text" id="f-grade" value="一年級"></div>'+
-      '<div class="field"><label>班級</label><input type="text" id="f-cls" value="1班"></div>'+
-      '<div class="field full"><label>任課教師</label><input type="text" id="f-teacher" placeholder="教師姓名"></div>'+
-      '<div class="field full"><label>雲端班級代碼(需與 Google Sheet「學生名冊」分頁的「班級代碼」欄一致)</label><input type="text" id="f-classkey"></div>'+
-      '</div>',
-    onMount:function(body){
-      var fill = function(){
-        var y=body.querySelector('#f-year').value.trim()||'115';
-        var t=body.querySelector('#f-term').value;
-        var g=body.querySelector('#f-grade').value.trim()||'一年級';
-        var c=body.querySelector('#f-cls').value.trim()||'1班';
-        body.querySelector('#f-classkey').value = suggestClassKey(y,t,g,c);
-      };
-      ['#f-year','#f-term','#f-grade','#f-cls'].forEach(function(sel){
-        body.querySelector(sel).addEventListener('input', fill);
-        body.querySelector(sel).addEventListener('change', fill);
-      });
-      fill();
-    },
-    actions:[
-      {label:'取消'},
-      {label:'建立班級', primary:true, onClick:function(body, close){
-        snapshotBeforeChange();
-        var id = uid('cls');
-        state.classes.push({
-          id:id,
-          year: body.querySelector('#f-year').value.trim()||'115',
-          term: body.querySelector('#f-term').value,
-          grade: body.querySelector('#f-grade').value.trim()||'一年級',
-          cls: body.querySelector('#f-cls').value.trim()||'1班',
-          teacher: body.querySelector('#f-teacher').value.trim()||'未填寫',
-          classKey: body.querySelector('#f-classkey').value.trim()||uid('key')
-        });
-        state.activeClassId = id;
-        state.activeUnitId = null;
-        save(); close(); renderAll();
-        toast('已建立新班級。若要用 Google Sheet 管理名單,請到試算表「學生名冊」分頁用同樣的班級代碼建立學生,再按「雲端同步→同步名單」。');
-      }}
-    ]
-  });
-}
-
-function openNewUnitModal(){
-  if(!state.activeClassId){ toast('請先建立班級'); return; }
-  showModal({
-    title:'新增單元',
-    bodyHtml:
-      '<div class="form-grid">'+
-      '<div class="field full"><label>單元名稱</label><input type="text" id="f-uname" placeholder="例如:籃球-定點投籃"></div>'+
-      '<div class="field full"><label>評量週次 / 日期</label><input type="text" id="f-uweek" placeholder="例如:第10週 或 2026/10/20"></div>'+
-      '</div><p class="hint" style="margin:0">會先帶入「技能表現、體能表現、參與合作、努力與進步」四個評量項目範例,您可在「評量設定」頁自由修改、刪除或新增。</p>',
-    actions:[
-      {label:'取消'},
-      {label:'建立單元', primary:true, onClick:function(body, close){
-        var name = body.querySelector('#f-uname').value.trim();
-        if(!name){ toast('請輸入單元名稱'); return; }
-        snapshotBeforeChange();
-        var id = uid('unit');
-        var items = DEFAULT_ITEMS.map(function(it,i){ return Object.assign({id:uid('item'), order:i}, JSON.parse(JSON.stringify(it))); });
-        state.units.push({
-          id:id, classId:state.activeClassId,
-          name:name, week: body.querySelector('#f-uweek').value.trim()||'未填寫',
-          items:items
-        });
-        state.activeUnitId = id;
-        save(); close(); renderAll();
-        cloudPushUnit(byId(state.units, id));
-        toast('已建立新單元');
-      }}
-    ]
-  });
-}
-
-/* ---------- tabs ---------- */
-function renderTabs(){
-  var btns = document.querySelectorAll('.tab-btn');
-  btns.forEach(function(b){
-    b.classList.toggle('active', b.dataset.tab===activeTab);
-    b.onclick = function(){ activeTab = b.dataset.tab; renderTabs(); renderPanels(); };
-  });
-  ['settings','roster','stats'].forEach(function(t){
-    document.getElementById('panel-'+t).classList.toggle('active', t===activeTab);
-  });
-}
-function renderPanels(){
-  renderTabs();
-  var unit = activeUnit();
-  if(!unit){
-    ['settings','roster','stats'].forEach(function(t){
-      document.getElementById('panel-'+t).innerHTML = '<div class="card hint">請先在上方建立班級與單元。</div>';
-    });
-    return;
-  }
-  renderSettingsPanel(unit);
-  renderRosterPanel(unit);
-  renderStatsPanel(unit);
-}
-
-/* ---------- settings panel ---------- */
-function typeLabel(t){ return {score:'分數(0-100)', level:'等級', metric:'數據', done:'完成狀態'}[t]; }
-
-function renderSettingsPanel(unit){
-  var el = document.getElementById('panel-settings');
-  var items = unit.items.slice().sort(function(a,b){ return a.order-b.order; });
-  var totalWeight = items.reduce(function(s,it){ return s+Number(it.weight||0); }, 0);
-
-  var rows = items.map(function(item, idx){
-    return '<div class="item-row" data-item="'+item.id+'">'+
-      '<div class="order-btns">'+
-        '<button class="small ghost" data-act="up" '+(idx===0?'disabled':'')+' title="上移">▲</button>'+
-        '<button class="small ghost" data-act="down" '+(idx===items.length-1?'disabled':'')+' title="下移">▼</button>'+
-      '</div>'+
-      '<input type="text" class="it-name" value="'+escapeHtml(item.name)+'">'+
-      '<select class="it-type">'+['score','level','metric','done'].map(function(t){
-        return '<option value="'+t+'"'+(t===item.type?' selected':'')+'>'+typeLabel(t)+'</option>';
-      }).join('')+'</select>'+
-      '<input type="number" class="it-weight" value="'+item.weight+'" min="0" max="100" step="1"> %'+
-      '<div class="config-inline" data-config></div>'+
-      '<div class="row-actions"><button class="small danger" data-act="del">刪除</button></div>'+
-    '</div>';
-  }).join('');
-
-  el.innerHTML =
-    '<div class="card">'+
-      '<h2 style="font-size:15px;margin-bottom:10px">評量項目設定・'+escapeHtml(unit.name)+'</h2>'+
-      '<div class="item-row" style="font-size:11px;color:var(--fg-muted);border-bottom:2px solid var(--border);font-weight:600">'+
-        '<div></div><div>項目名稱</div><div>評量方式</div><div>配分</div><div>方式設定</div><div></div></div>'+
-      rows+
-      '<div style="margin-top:10px"><button id="btn-add-item">+ 新增評量項目</button></div>'+
-      (totalWeight===100
-        ? '<div class="weight-warn" style="background:var(--ok-bg);color:var(--ok)">配分合計 '+totalWeight+'%,加總正確 ✓</div>'
-        : '<div class="weight-warn" style="background:var(--warn-bg);color:var(--warn)">⚠ 配分合計為 '+totalWeight+'%,與 100% 不符,請確認是否為刻意設計</div>'
-      )+
-    '</div>';
-
-  items.forEach(function(item){
-    var row = el.querySelector('.item-row[data-item="'+item.id+'"]');
-    renderItemConfig(row.querySelector('[data-config]'), item);
-
-    row.querySelector('.it-name').onchange = function(e){
-      snapshotBeforeChange(); item.name = e.target.value; save(); renderPanels(); cloudPushUnit(unit);
-    };
-    row.querySelector('.it-type').onchange = function(e){
-      snapshotBeforeChange();
-      item.type = e.target.value;
-      item.config = defaultConfigFor(item.type);
-      save(); renderPanels(); cloudPushUnit(unit);
-    };
-    row.querySelector('.it-weight').onchange = function(e){
-      snapshotBeforeChange(); item.weight = Number(e.target.value)||0; save(); renderPanels(); cloudPushUnit(unit);
-    };
-    row.querySelector('[data-act="up"]').onclick = function(){
-      snapshotBeforeChange(); swapOrder(items, item, -1); save(); renderPanels(); cloudPushUnit(unit);
-    };
-    row.querySelector('[data-act="down"]').onclick = function(){
-      snapshotBeforeChange(); swapOrder(items, item, 1); save(); renderPanels(); cloudPushUnit(unit);
-    };
-    row.querySelector('[data-act="del"]').onclick = function(){
-      confirmDanger('刪除評量項目「'+escapeHtml(item.name)+'」後,該項目的所有登錄資料也會移除,確定要刪除嗎?', function(){
-        snapshotBeforeChange();
-        unit.items = unit.items.filter(function(i){ return i.id!==item.id; });
-        save(); renderPanels(); cloudPushUnit(unit);
-      });
-    };
-  });
-
-  document.getElementById('btn-add-item').onclick = function(){
-    snapshotBeforeChange();
-    unit.items.push({id:uid('item'), name:'新評量項目', type:'score', weight:0, order:unit.items.length, config:defaultConfigFor('score')});
-    save(); renderPanels(); cloudPushUnit(unit);
-  };
-}
-
-function defaultConfigFor(type){
-  if(type==='score') return {min:0, max:100};
-  if(type==='level') return {levels:[{label:'優良',score:95},{label:'達標',score:80},{label:'待加強',score:60}]};
-  if(type==='metric') return {unit:'秒', best:12, pass:20, direction:'low'};
-  if(type==='done') return {options:[{label:'已完成',score:100},{label:'尚未完成',score:60}]};
-  return {};
-}
-
-function swapOrder(items, item, dir){
-  var sorted = items.slice().sort(function(a,b){ return a.order-b.order; });
-  var idx = sorted.indexOf(item);
-  var j = idx+dir;
-  if(j<0 || j>=sorted.length) return;
-  var tmp = sorted[j].order; sorted[j].order = sorted[idx].order; sorted[idx].order = tmp;
-}
-
-function renderItemConfig(container, item){
-  if(item.type==='score'){
-    container.innerHTML =
-      '最低 <input type="number" class="cfg-min" value="'+item.config.min+'" style="width:56px">'+
-      ' 最高 <input type="number" class="cfg-max" value="'+item.config.max+'" style="width:56px">';
-    container.querySelector('.cfg-min').onchange = function(e){ snapshotBeforeChange(); item.config.min=Number(e.target.value); save(); cloudPushUnit(unit); };
-    container.querySelector('.cfg-max').onchange = function(e){ snapshotBeforeChange(); item.config.max=Number(e.target.value); save(); cloudPushUnit(unit); };
-  } else if(item.type==='level' || item.type==='done'){
-    var list = item.type==='level' ? item.config.levels : item.config.options;
-    var chips = list.map(function(lv, i){
-      return '<span class="level-chip" data-i="'+i+'">'+
-        '<input type="text" class="lv-label" value="'+escapeHtml(lv.label)+'">'+
-        '<input type="number" class="lv-score" value="'+lv.score+'">分'+
-        '<button class="small ghost" data-rm style="padding:0 4px">×</button></span>';
-    }).join('');
-    container.innerHTML = chips + '<button class="small ghost" data-add>+ 新增選項</button>';
-    container.querySelectorAll('.level-chip').forEach(function(chip){
-      var i = Number(chip.dataset.i);
-      chip.querySelector('.lv-label').onchange = function(e){ snapshotBeforeChange(); list[i].label=e.target.value; save(); cloudPushUnit(unit); };
-      chip.querySelector('.lv-score').onchange = function(e){ snapshotBeforeChange(); list[i].score=Number(e.target.value); save(); cloudPushUnit(unit); };
-      chip.querySelector('[data-rm]').onclick = function(){ snapshotBeforeChange(); list.splice(i,1); save(); renderPanels(); cloudPushUnit(unit); };
-    });
-    container.querySelector('[data-add]').onclick = function(){
-      snapshotBeforeChange(); list.push({label:'新選項', score:70}); save(); renderPanels(); cloudPushUnit(unit);
-    };
-  } else if(item.type==='metric'){
-    container.innerHTML =
-      '單位 <input type="text" class="cfg-unit" value="'+escapeHtml(item.config.unit)+'" style="width:44px">'+
-      ' 滿分值 <input type="number" class="cfg-best" value="'+item.config.best+'" style="width:56px">'+
-      ' 及格值 <input type="number" class="cfg-pass" value="'+item.config.pass+'" style="width:56px">'+
-      ' <select class="cfg-dir"><option value="low"'+(item.config.direction==='low'?' selected':'')+'>數值越低越好</option>'+
-      '<option value="high"'+(item.config.direction==='high'?' selected':'')+'>數值越高越好</option></select>';
-    container.querySelector('.cfg-unit').onchange = function(e){ snapshotBeforeChange(); item.config.unit=e.target.value; save(); cloudPushUnit(unit); };
-    container.querySelector('.cfg-best').onchange = function(e){ snapshotBeforeChange(); item.config.best=Number(e.target.value); save(); cloudPushUnit(unit); };
-    container.querySelector('.cfg-pass').onchange = function(e){ snapshotBeforeChange(); item.config.pass=Number(e.target.value); save(); cloudPushUnit(unit); };
-    container.querySelector('.cfg-dir').onchange = function(e){ snapshotBeforeChange(); item.config.direction=e.target.value; save(); cloudPushUnit(unit); };
-  }
-}
-
-/* ---------- roster panel ---------- */
-var rosterFilter = 'all';
-var rosterSearch = '';
-
-function renderRosterPanel(unit){
-  var el = document.getElementById('panel-roster');
-  var students = classStudents(unit.classId).slice().sort(function(a,b){ return (a.seat||'').localeCompare(b.seat||''); });
-
-  var filtered = students.filter(function(stu){
-    var r = studentUnitResult(unit, stu.id);
-    if(rosterSearch){
-      var q = rosterSearch.trim();
-      if(stu.name.indexOf(q)===-1 && stu.seat.indexOf(q)===-1) return false;
-    }
-    if(rosterFilter==='all') return true;
-    if(rosterFilter==='pending') return r.status==='待登錄';
-    if(rosterFilter==='retest') return r.status==='待補測';
-    if(rosterFilter==='done') return r.status==='已完成';
-    return true;
-  });
-
-  var items = unit.items.slice().sort(function(a,b){ return a.order-b.order; });
-
-  var head = '<tr>'+
-    '<th class="sticky-col col-seat">座號</th>'+
-    '<th class="sticky-col col-name">姓名</th>'+
-    '<th>出席狀態</th>'+
-    items.map(function(it){ return '<th>'+escapeHtml(it.name)+'<br><span class="hint">('+typeLabel(it.type)+' ・ '+it.weight+'%)</span></th>'; }).join('')+
-    '<th>加權成績</th><th>狀態</th><th>教師備註</th><th></th>'+
-  '</tr>';
-
-  var rows = filtered.map(function(stu){
-    var r = studentUnitResult(unit, stu.id);
-    var att = r.att;
-    var attOpts = ATTEND.map(function(a){ return '<option value="'+a+'"'+(a===att?' selected':'')+'>'+a+'</option>'; }).join('');
-    var cells = items.map(function(item){
-      return '<td>'+cellInputHtml(unit, stu, item)+'</td>';
-    }).join('');
-    return '<tr data-stu="'+stu.id+'">'+
-      '<td class="sticky-col col-seat tabular">'+escapeHtml(stu.seat)+'</td>'+
-      '<td class="sticky-col col-name">'+escapeHtml(stu.name)+'</td>'+
-      '<td><select class="att-sel" data-stu="'+stu.id+'">'+attOpts+'</select></td>'+
-      cells+
-      '<td class="weighted-total tabular">'+(r.finalScore===null?'—':r.finalScore)+'</td>'+
-      '<td><span class="badge '+(ATTEND_BADGE[att] && r.status!=='已完成' && r.status!=='待登錄' ? ATTEND_BADGE[att] : (r.status==='已完成'?'ok':r.status==='待登錄'?'warn':'muted'))+'">'+r.status+'</span></td>'+
-      '<td><input type="text" class="note-input" data-stu="'+stu.id+'" value="'+escapeHtml(state.notes[attKey(unit.id,stu.id)]||'')+'" placeholder="備註"></td>'+
-      '<td class="row-actions"><button class="small danger" data-act="del-stu" data-stu="'+stu.id+'">刪除</button></td>'+
-    '</tr>';
-  }).join('');
-
-  var pendingCount = students.filter(function(s){ return studentUnitResult(unit,s.id).status==='待登錄'; }).length;
-  var retestCount = students.filter(function(s){ return studentUnitResult(unit,s.id).status==='待補測'; }).length;
-  var doneCount = students.filter(function(s){ return studentUnitResult(unit,s.id).status==='已完成'; }).length;
-
-  el.innerHTML =
-    '<div class="card">'+
-      '<div class="toolbar">'+
-        '<input type="search" id="roster-search" placeholder="搜尋姓名或座號" value="'+escapeHtml(rosterSearch)+'">'+
-        '<button class="filter-chip'+(rosterFilter==='all'?' active':'')+'" data-f="all">全部('+students.length+')</button>'+
-        '<button class="filter-chip'+(rosterFilter==='pending'?' active':'')+'" data-f="pending">待登錄('+pendingCount+')</button>'+
-        '<button class="filter-chip'+(rosterFilter==='retest'?' active':'')+'" data-f="retest">待補測('+retestCount+')</button>'+
-        '<button class="filter-chip'+(rosterFilter==='done'?' active':'')+'" data-f="done">已完成('+doneCount+')</button>'+
-        '<div style="flex:1"></div>'+
-        '<button id="btn-add-student" '+(students.length>=MAX_STUDENTS?'disabled':'')+'>+ 新增學生</button>'+
-        '<button id="btn-export-csv">匯出 CSV</button>'+
-      '</div>'+
-      (students.length>=MAX_STUDENTS ? '<p class="hint" style="margin:0 0 8px">已達班級人數上限 '+MAX_STUDENTS+' 人</p>' : '')+
-      (cloudConfigured() ? '<p class="hint" style="margin:0 0 8px">已連接雲端:建議直接在 Google Sheet「學生名冊」分頁增刪學生,再按「雲端同步→同步名單」,避免兩邊名單不一致。</p>' : '')+
-      '<div class="table-wrap"><table><thead>'+head+'</thead><tbody>'+rows+'</tbody></table></div>'+
-      (filtered.length===0 ? '<p class="hint" style="margin-top:10px">沒有符合篩選條件的學生。</p>' : '')+
-    '</div>';
-
-  document.getElementById('roster-search').oninput = function(e){
-    rosterSearch = e.target.value;
-    var pos = e.target.selectionStart;
-    renderRosterPanel(unit);
-    var again = document.getElementById('roster-search');
-    if(again){ again.focus(); try{ again.setSelectionRange(pos,pos); }catch(err){} }
-  };
-  el.querySelectorAll('.filter-chip').forEach(function(b){
-    b.onclick = function(){ rosterFilter = b.dataset.f; renderRosterPanel(unit); };
-  });
-  document.getElementById('btn-add-student').onclick = function(){ openAddStudentModal(unit); };
-  document.getElementById('btn-export-csv').onclick = function(){ exportCsv(unit, students); };
-
-  el.querySelectorAll('.att-sel').forEach(function(sel){
-    sel.onchange = function(){
-      snapshotBeforeChange();
-      state.attendance[attKey(unit.id, sel.dataset.stu)] = sel.value;
-      save(); renderAll();
-      var stu = byId(state.students, sel.dataset.stu);
-      if(stu) cloudPushAttendance(unit, stu);
-    };
-  });
-  el.querySelectorAll('.note-input').forEach(function(inp){
-    inp.onchange = function(){
-      state.notes[attKey(unit.id, inp.dataset.stu)] = inp.value;
-      save();
-      var stu = byId(state.students, inp.dataset.stu);
-      if(stu) cloudPushAttendance(unit, stu);
-    };
-  });
-  el.querySelectorAll('[data-act="del-stu"]').forEach(function(btn){
-    btn.onclick = function(){
-      var stu = byId(state.students, btn.dataset.stu);
-      confirmDanger('刪除學生「'+escapeHtml(stu.name)+'」會移除其在所有單元的登錄資料,確定要刪除嗎?', function(){
-        snapshotBeforeChange();
-        state.students = state.students.filter(function(s){ return s.id!==stu.id; });
-        save(); renderAll();
-      });
-    };
-  });
-
-  bindCellInputs(el, unit, items);
-}
-
-function cellInputHtml(unit, stu, item){
-  var raw = state.records[recKey(unit.id, stu.id, item.id)];
-  var r = computeScore(item, raw);
-  var badClass = r.bad ? ' bad' : '';
-  if(item.type==='score'){
-    return '<input type="number" class="cell-input'+badClass+'" data-item="'+item.id+'" data-stu="'+stu.id+'" value="'+(raw==null?'':raw)+'" title="'+(r.bad?'超出範圍 '+item.config.min+'-'+item.config.max:'')+'">';
-  }
-  if(item.type==='level' || item.type==='done'){
-    var list = item.type==='level' ? item.config.levels : item.config.options;
-    var btns = list.map(function(l){
-      var active = l.label===raw;
-      return '<button type="button" class="seg-btn'+(active?' active':'')+'" data-item="'+item.id+'" data-stu="'+stu.id+'" data-val="'+escapeHtml(l.label)+'">'+escapeHtml(l.label)+'</button>';
-    }).join('');
-    return '<div class="seg-group">'+btns+'</div>'+
-      (r.score!==null?'<div class="converted">'+r.display+'</div>':'');
-  }
-  if(item.type==='metric'){
-    return '<input type="number" class="cell-input'+badClass+'" data-item="'+item.id+'" data-stu="'+stu.id+'" value="'+(raw==null?'':raw)+'" placeholder="'+escapeHtml(item.config.unit)+'">'+
-      (r.score!==null?'<div class="converted">'+r.display+'</div>':'');
-  }
-  return '';
-}
-
-function bindCellInputs(el, unit, items){
-  var inputs = Array.prototype.slice.call(el.querySelectorAll('.cell-input'));
-  inputs.forEach(function(inp){
-    var commit = function(){
-      snapshotBeforeChange();
-      state.records[recKey(unit.id, inp.dataset.stu, inp.dataset.item)] = inp.value;
-      save(); renderRosterPanel(unit); renderStatsPanel(unit);
-      var stu = byId(state.students, inp.dataset.stu);
-      var item = byId(items, inp.dataset.item);
-      if(stu && item) cloudPushRecord(unit, stu, item, inp.value);
-    };
-    inp.addEventListener('change', commit);
-    inp.addEventListener('keydown', function(e){
-      if(e.key==='Enter'){ e.preventDefault(); inp.blur(); moveFocus(inp, 1); }
-      if(e.key==='ArrowDown'){ e.preventDefault(); moveFocus(inp, 1); }
-      if(e.key==='ArrowUp'){ e.preventDefault(); moveFocus(inp, -1); }
-    });
-  });
-  function moveFocus(current, dir){
-    var itemId = current.dataset.item;
-    var col = inputs.filter(function(i){ return i.dataset.item===itemId; });
-    var idx = col.indexOf(current);
-    var next = col[idx+dir];
-    if(next) next.focus();
-  }
-
-  // 等級/完成狀態:一鍵式按鈕,單次點擊直接登錄,現場操作更快
-  el.querySelectorAll('.seg-btn').forEach(function(btn){
-    btn.addEventListener('click', function(){
-      snapshotBeforeChange();
-      var key = recKey(unit.id, btn.dataset.stu, btn.dataset.item);
-      var same = state.records[key] === btn.dataset.val;
-      var newVal = same ? '' : btn.dataset.val; // 再點一次可取消選擇
-      state.records[key] = newVal;
-      save(); renderRosterPanel(unit); renderStatsPanel(unit);
-      var stu = byId(state.students, btn.dataset.stu);
-      var item = byId(items, btn.dataset.item);
-      if(stu && item) cloudPushRecord(unit, stu, item, newVal);
-    });
-  });
-}
-
-function openAddStudentModal(unit){
-  showModal({
-    title:'新增學生',
-    bodyHtml:
-      '<div class="form-grid">'+
-      '<div class="field"><label>座號</label><input type="text" id="f-seat"></div>'+
-      '<div class="field"><label>姓名</label><input type="text" id="f-name"></div>'+
-      '</div><p class="hint" style="margin:0">提醒:請使用虛構示範資料,勿輸入真實學生個資於此原型中。</p>',
-    actions:[
-      {label:'取消'},
-      {label:'新增', primary:true, onClick:function(body, close){
-        var seat = body.querySelector('#f-seat').value.trim();
-        var name = body.querySelector('#f-name').value.trim();
-        if(!seat || !name){ toast('請輸入座號與姓名'); return; }
-        if(classStudents(unit.classId).length>=MAX_STUDENTS){ toast('已達人數上限'); return; }
-        snapshotBeforeChange();
-        state.students.push({id:uid('stu'), classId:unit.classId, seat:seat, name:name});
-        save(); close(); renderAll();
-      }}
-    ]
-  });
-}
-
-function exportCsv(unit, students){
-  var items = unit.items.slice().sort(function(a,b){ return a.order-b.order; });
-  var header = ['座號','姓名','出席狀態'].concat(items.map(function(i){ return i.name+'(原始數據)'; }))
-    .concat(items.map(function(i){ return i.name+'(換算成績)'; }))
-    .concat(['加權成績','狀態','教師備註']);
-  var lines = [header.join(',')];
-  students.forEach(function(stu){
-    var r = studentUnitResult(unit, stu.id);
-    var rawVals = items.map(function(it){ return csvEscape(state.records[recKey(unit.id, stu.id, it.id)]||''); });
-    var scoreVals = items.map(function(it){
-      var raw = state.records[recKey(unit.id, stu.id, it.id)];
-      var c = computeScore(it, raw);
-      return c.score===null?'':c.score;
-    });
-    var note = state.notes[attKey(unit.id, stu.id)]||'';
-    var row = [stu.seat, stu.name, r.att].concat(rawVals).concat(scoreVals)
-      .concat([r.finalScore===null?'':r.finalScore, r.status, csvEscape(note)]);
-    lines.push(row.join(','));
-  });
-  var csv = '﻿' + lines.join('\r\n');
-  triggerCsvDownload(csv, unit.name+'_成績.csv');
-}
-function csvEscape(v){
-  v = String(v);
-  if(/[",\n]/.test(v)) return '"'+v.replace(/"/g,'""')+'"';
-  return v;
-}
-
-function triggerCsvDownload(csvText, filename){
-  if(window.claude && window.claude.use){
-    // 在 claude.ai Artifact 預覽環境中,一般網頁下載會被封鎖,改用 downloads 能力
-    window.claude.use('downloads').then(function(downloads){
-      if(!downloads){ toast('此環境不支援直接下載,請改用「複製 CSV 文字」'); showCsvFallback(csvText); return; }
-      var bytes = new TextEncoder().encode(csvText);
-      downloads.save({filename:filename, data:bytes}).then(function(){
-        toast('已請求下載:'+filename);
-      }).catch(function(){
-        toast('下載已取消或失敗'); showCsvFallback(csvText);
-      });
-    }).catch(function(){ showCsvFallback(csvText); });
-    return;
-  }
-  // 正式網站(GitHub Pages 等)環境:用一般瀏覽器下載
-  try{
-    var blob = new Blob([csvText], {type:'text/csv;charset=utf-8;'});
-    var url = URL.createObjectURL(blob);
-    var a = document.createElement('a');
-    a.href = url; a.download = filename;
-    document.body.appendChild(a); a.click(); document.body.removeChild(a);
-    setTimeout(function(){ URL.revokeObjectURL(url); }, 2000);
-    toast('已下載:'+filename);
-  }catch(err){
-    showCsvFallback(csvText);
-  }
-}
-
-function showCsvFallback(csvText){
-  showModal({
-    title:'複製 CSV 內容',
-    bodyHtml:'<p class="hint" style="margin:0 0 6px">請全選下方文字並複製,貼到 Excel 或 Google Sheet 中即可。</p>'+
-      '<textarea id="csv-text" style="width:100%;height:220px;font-family:monospace;font-size:12px" readonly></textarea>',
-    onMount:function(body){ body.querySelector('#csv-text').value = csvText; },
-    actions:[
-      {label:'複製', primary:true, onClick:function(body){
-        var ta = body.querySelector('#csv-text');
-        ta.select();
-        navigator.clipboard && navigator.clipboard.writeText(ta.value).then(function(){ toast('已複製到剪貼簿'); }).catch(function(){});
-      }},
-      {label:'關閉'}
-    ]
-  });
-}
-
-/* ---------- stats panel ---------- */
-function renderStatsPanel(unit){
-  var el = document.getElementById('panel-stats');
-  var students = classStudents(unit.classId);
-  var results = students.map(function(s){ return {stu:s, r:studentUnitResult(unit, s.id)}; });
-  var counts = {'已完成':0,'待登錄':0,'待補測':0,'請假':0,'免測':0};
-  results.forEach(function(x){ counts[x.r.status] = (counts[x.r.status]||0)+1; });
-
-  var items = unit.items.slice().sort(function(a,b){ return a.order-b.order; });
-  var itemStats = items.map(function(item){
-    var scores = [];
-    results.forEach(function(x){
-      if(x.r.status!=='已完成') return;
-      var raw = state.records[recKey(unit.id, x.stu.id, item.id)];
-      var c = computeScore(item, raw);
-      if(c.score!==null) scores.push(c.score);
-    });
-    var avg = scores.length ? Math.round(scores.reduce(function(a,b){return a+b;},0)/scores.length) : null;
-    return {item:item, avg:avg, n:scores.length};
-  });
-
-  var pendingNames = results.filter(function(x){ return x.r.status==='待登錄'; }).map(function(x){ return x.stu.name; });
-  var retestNames = results.filter(function(x){ return x.r.status==='待補測'; }).map(function(x){ return x.stu.name; });
-
-  el.innerHTML =
-    '<div class="card">'+
-      '<h2 style="font-size:15px;margin-bottom:10px">班級統計・'+escapeHtml(unit.name)+'</h2>'+
-      '<div class="stat-grid">'+
-        statTile(counts['已完成'],'已完成','ok')+
-        statTile(counts['待登錄'],'待登錄','warn')+
-        statTile(counts['待補測'],'待補測','warn')+
-        statTile(counts['請假']+counts['免測'],'請假／免測','muted')+
-        statTile(students.length,'班級總人數','muted')+
-      '</div>'+
-      '<p class="hint" style="margin:0 0 10px">以下平均僅計算「已完成」登錄的學生,待補測／待登錄／請假／免測學生不計入平均,避免誤算為 0 分。</p>'+
-      itemStats.map(function(st){
-        var pct = st.avg===null ? 0 : st.avg;
-        return '<div class="bar-row">'+
-          '<div style="font-size:12px">'+escapeHtml(st.item.name)+'</div>'+
-          '<div class="bar-track"><div class="bar-fill" style="width:'+pct+'%"></div></div>'+
-          '<div class="tabular" style="font-size:12px">'+(st.avg===null?'無資料':(st.avg+'分'))+'</div>'+
-        '</div>';
-      }).join('')+
-    '</div>'+
-    '<div class="card">'+
-      '<h3 style="font-size:14px;margin-bottom:8px">待登錄學生('+pendingNames.length+')</h3>'+
-      '<div class="pending-list">'+(pendingNames.length?pendingNames.map(function(n){return '<span class="badge warn">'+escapeHtml(n)+'</span>';}).join(''):'<span class="hint">無</span>')+'</div>'+
-    '</div>'+
-    '<div class="card">'+
-      '<h3 style="font-size:14px;margin-bottom:8px">待補測學生('+retestNames.length+')</h3>'+
-      '<div class="pending-list">'+(retestNames.length?retestNames.map(function(n){return '<span class="badge warn">'+escapeHtml(n)+'</span>';}).join(''):'<span class="hint">無</span>')+'</div>'+
-    '</div>';
-}
-function statTile(num,label,tone){
-  return '<div class="stat-tile"><div class="num tabular">'+num+'</div><div class="lbl badge '+tone+'" style="padding:1px 8px">'+label+'</div></div>';
-}
-
-/* ---------- boot ---------- */
-function renderAll(){
-  renderTopbar();
-  renderPanels();
-}
-
-state = load();
-if(!state.activeUnitId && state.units.length) state.activeUnitId = state.units[0].id;
-save();
-renderAll();
-
+window.__pe = { S, ui, flush, bootstrap, gradeOf };      // 供除錯與自動測試
 })();
 </script>
 </body>

@@ -1,0 +1,1 @@
+{ "name": "pe-grades-tests", "private": true, "version": "1.0.0", "scripts": { "test": "node run.js" }, "devDependencies": { "jsdom": "24.1.3" } }
