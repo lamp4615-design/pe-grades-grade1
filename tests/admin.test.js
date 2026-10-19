@@ -47,7 +47,7 @@ module.exports = async function adminTests({ ok, eq, sleep, KEY }) {
   ok(/92\.6/.test(cards[0].textContent), '班級總覽：101 平均 92.6 分（手算 92.57，含跳繩優分 98 的自訂換算）');
   ok(/關注 1/.test(cards[0].textContent), '班級總覽：101 需關注 1 位（3 號整體偏低；2 號只有單一活動退步，列為「留意」不計入）');
   ok(/–/.test(cards[1].textContent), '班級總覽：沒資料的班級顯示「–」');
-  ok(!/NaN|undefined/.test(d.body.textContent), '總覽頁沒有 NaN／undefined');
+  ok(!/NaN|undefined/.test(text()), '總覽頁沒有 NaN／undefined');
 
   // 班級分析
   cards[0].click();
@@ -58,7 +58,7 @@ module.exports = async function adminTests({ ok, eq, sleep, KEY }) {
   ok(d.querySelectorAll('.insight li').length >= 4, '班級分析：自動產生文字摘要（' + d.querySelectorAll('.insight li').length + ' 句）');
   ok(d.querySelectorAll('.hist div').length === 4, '班級分析：分數分布 4 段');
   ok(d.querySelector('svg polyline') && d.querySelectorAll('svg circle').length === 2, '班級分析：趨勢折線（2 個登記日）');
-  ok(!/NaN|undefined/.test(d.body.textContent), '班級分析沒有 NaN／undefined');
+  ok(!/NaN|undefined/.test(text()), '班級分析沒有 NaN／undefined');
 
   // 學生成績表
   tab('stu');
@@ -107,8 +107,35 @@ module.exports = async function adminTests({ ok, eq, sleep, KEY }) {
   A.st.mode = 'act'; A.render(); tab('stu');
   ok(/9[89]\.\d/.test(d.querySelector('tbody tr').textContent), '總分算法切換為「各活動平均」仍正確');
   A.st.from = '2026-09-10'; A.render(); tab('cls');
-  ok(!/NaN|undefined/.test(d.body.textContent), '日期區間篩選（9/10 起）不出錯');
+  ok(!/NaN|undefined/.test(text()), '日期區間篩選（9/10 起）不出錯');
   A.st.from = '2030-01-01'; A.render();
   ok(/還沒有任何成績/.test(text()), '區間內沒資料 → 友善提示');
   w.close();
+
+  // ── Apps Script 個人部署模式（後台放在 Apps Script，用 google.script.run） ──
+  console.log('  — 放進 Apps Script 的個人部署 —');
+  const boot = g2.ctx.adminBootstrap();
+  ok(boot.ok && boot.classOrder.includes('101') && boot.scores.length === recs.length + 1, 'adminBootstrap：擁有者可取得完整資料');
+  const anon = build({ activeEmail: '' }); anon.ctx.setup();
+  let denied = null; try { anon.ctx.adminBootstrap(); } catch (e) { denied = e.message; }
+  ok(/僅限/.test(denied || ''), '匿名訪客呼叫 adminBootstrap 被拒絕（公開部署也讀不到資料）');
+  const other = build({ activeEmail: 'other@example.com' }); other.ctx.setup();
+  denied = null; try { other.ctx.adminBootstrap(); } catch (e) { denied = e.message; }
+  ok(/僅限/.test(denied || ''), '其他 Google 帳號呼叫 adminBootstrap 被拒絕');
+  eq(g2.ctx.doGet({}).file, 'Admin', 'doGet 預設回傳 Admin 後台頁');
+  eq(JSON.parse(g2.ctx.doGet({ parameter: { ping: '1' } }).getContent()).ok, true, 'doGet?ping=1 仍可做健康檢查');
+  const dom2 = new JSDOM(adminHtml, {
+    url: 'https://n-xyz.googleusercontent.com/userCodeAppPanel', runScripts: 'dangerously', pretendToBeVisual: true,
+    beforeParse(win) {
+      win.scrollTo = () => { };
+      win.fetch = () => { throw new Error('個人部署模式不該用 fetch'); };
+      win.google = { script: { run: { withSuccessHandler(f) { this._ok = f; return this; }, withFailureHandler(f) { this._fail = f; return this; }, adminBootstrap() { const ok2 = this._ok, fail = this._fail; try { const r = JSON.parse(JSON.stringify(g2.ctx.adminBootstrap())); setTimeout(() => ok2(r), 5); } catch (e) { setTimeout(() => fail(e), 5); } } } } };
+    }
+  });
+  const w2 = dom2.window, A2 = w2.__admin;
+  for (let i = 0; i < 100 && !A2.S.scores.size; i++) await sleep(20);
+  ok(A2.S.scores.size > 0 && w2.document.querySelectorAll('.cc').length === 2, '個人部署模式：不需通行碼、不用 fetch，直接顯示班級總覽');
+  ok(w2.document.querySelector('header a').hidden, '個人部署模式：隱藏「← 登記頁」連結');
+  ok(w2.document.getElementById('modal').hidden, '個人部署模式：不出現通行碼登入視窗');
+  w2.close();
 };

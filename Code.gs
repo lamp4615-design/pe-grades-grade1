@@ -186,8 +186,20 @@ function onOpen() {
 
 /* ───────────────────────── 網頁應用程式 ───────────────────────── */
 
-function doGet() {
-  return json_({ ok: true, service: 'pe-grades-grade1', ready: !!SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SHEETS.score) });
+function doGet(e) {
+  if (e && e.parameter && e.parameter.ping) {
+    return json_({ ok: true, service: 'pe-grades-grade1', ready: !!SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SHEETS.score) });
+  }
+  // 教師後台頁面（需另外新增名為 Admin 的 HTML 檔）。資料只透過 adminBootstrap() 取得，且僅限擁有者。
+  return HtmlService.createHtmlOutputFromFile('Admin').setTitle('教師後台・體育成績')
+    .addMetaTag('viewport', 'width=device-width, initial-scale=1');
+}
+
+/** 後台用：回傳與 bootstrap 相同的資料。只有「擁有者本人」登入時才給，匿名或其他人一律拒絕。 */
+function adminBootstrap() {
+  var me = Session.getActiveUser().getEmail(), owner = Session.getEffectiveUser().getEmail();
+  if (!me || me !== owner) throw new Error('僅限試算表擁有者。請用「只有我自己」的部署網址，並以擁有者帳號登入。');
+  return bootstrap_({ days: 400 });
 }
 
 function doPost(e) {

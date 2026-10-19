@@ -164,18 +164,23 @@ function apply(j) {
   S.ver++;
 }
 function toast(m) { const t = $('#toast'); t.textContent = m; t.hidden = false; clearTimeout(toast.t); toast.t = setTimeout(() => t.hidden = true, 2600); }
-async function load(manual) {
+/* 放在 Apps Script 裡（個人部署）時走 google.script.run，由 Google 帳號把關；放在 GitHub 時走通行碼＋fetch。 */
+const IN_GAS = typeof google !== 'undefined' && !!(google.script && google.script.run);
+function fetchBoot() {
+  if (IN_GAS) return new Promise((res, rej) => google.script.run.withSuccessHandler(res).withFailureHandler(e => rej(new Error((e && e.message) || String(e)))).adminBootstrap());
   const url = DEFAULT_API || auth.url;
-  if (!url || !auth.key) { login(); return; }
+  const ctl = new AbortController(); const to = setTimeout(() => ctl.abort(), 30000);
+  return fetch(url, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ action: 'bootstrap', days: 400, key: auth.key }), signal: ctl.signal })
+    .then(r => r.json()).finally(() => clearTimeout(to));
+}
+async function load(manual) {
+  if (!IN_GAS && (!(DEFAULT_API || auth.url) || !auth.key)) { login(); return; }
   try {
-    const ctl = new AbortController(); const to = setTimeout(() => ctl.abort(), 30000);
-    const r = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ action: 'bootstrap', days: 400, key: auth.key }), signal: ctl.signal });
-    clearTimeout(to);
-    const j = await r.json();
+    const j = await fetchBoot();
     if (j.error === 'auth') { login('通行碼不正確'); return; }
     if (!j.ok) throw new Error(j.error);
     apply(j); S.at = new Date().toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' }); render(); if (manual) toast('已更新');
-  } catch (e) { toast('載入失敗：' + (e.name === 'AbortError' ? '逾時' : e.message) + (S.scores.size ? '（顯示本機快取）' : '')); if (!S.scores.size) $('#main').replaceChildren(h('div', { class: 'empty' }, '連不上後端，請檢查網路後按 ↻。')); }
+  } catch (e) { toast('載入失敗：' + (e.name === 'AbortError' ? '逾時' : e.message) + (S.scores.size ? '（顯示本機快取）' : '')); if (!S.scores.size) $('#main').replaceChildren(h('div', { class: 'empty' }, IN_GAS ? '無法讀取資料：' + e.message : '連不上後端，請檢查網路後按 ↻。')); }
 }
 function login(msg) {
   const m = $('#modal'); m.hidden = false;
@@ -448,7 +453,8 @@ $('#btnRefresh').addEventListener('click', () => load(true));
 document.addEventListener('keydown', e => { if (e.key === 'Escape') $('#drawer').classList.remove('open'); });
 
 (function init() {
-  const c = lsGet(LS.cache, null);
+  if (IN_GAS) { const back = document.querySelector('header a'); if (back) back.hidden = true; }
+  const c = IN_GAS ? null : lsGet(LS.cache, null);
   if (c && c.cfg) { apply({ cfg: c.cfg, classes: c.classes, classOrder: c.classOrder, scores: c.scores }); S.at = '本機快取'; }
   render(); load();
 })();

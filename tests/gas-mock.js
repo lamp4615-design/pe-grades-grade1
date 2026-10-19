@@ -53,6 +53,8 @@ function build(opts = {}) {
   const ctx = {
     console, Date, Math, JSON, Number, String, Object, Array, isNaN, parseFloat, Error, RegExp,
     Logger: { log: () => { } },
+    Session: { getActiveUser: () => ({ getEmail: () => (opts.activeEmail === undefined ? 'owner@example.com' : opts.activeEmail) }), getEffectiveUser: () => ({ getEmail: () => 'owner@example.com' }) },
+    HtmlService: { createHtmlOutputFromFile: n => { const o = { file: n, setTitle(t) { o.title = t; return o; }, addMetaTag() { return o; } }; return o; } },
     SpreadsheetApp: {
       getActiveSpreadsheet: () => ss,
       getUi: () => { throw new Error('no ui'); },
