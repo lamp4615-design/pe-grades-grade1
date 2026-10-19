@@ -11,8 +11,10 @@ var TZ = 'Asia/Taipei';
 var SHEETS = { roster: '班級名單', act: '活動設定', score: '成績', unit: '單元一覽' };
 var H_ROSTER = ['班級', '座號', '姓名'];
 var H_ACT = ['活動ID', '類別', '單元', '活動名稱', '圖示', '登記方式', '單位', '評分方向', '目標說明',
-  '勾選項目', '優(4)', '達成(3)', '接近(2)', '啟用', '來源'];
-var H_SCORE = ['時間戳', '日期', '班級', '座號', '姓名', '活動ID', '原始數值', '等級', '缺席', '備註', '唯一鍵', '勾選明細'];
+  '勾選項目', '優(4)', '達成(3)', '接近(2)', '啟用', '來源', '優分', '達成分', '接近分', '加油分'];
+var H_SCORE = ['時間戳', '日期', '班級', '座號', '姓名', '活動ID', '原始數值', '等級', '缺席', '備註', '唯一鍵', '勾選明細', '分數'];
+// 等級換算成績（落在 85–100 分）。活動設定的「優分／達成分／接近分／加油分」留空時用這組預設值。
+var DEFAULT_SCORES = [100, 93, 89, 85];
 var H_UNIT = ['單元', '主題', '教案名稱'];
 var EXAMPLE_CLASS = '範例班';
 var DEFAULT_DAYS = 240;
@@ -33,11 +35,11 @@ var DEFAULT_UNITS = [
 ];
 
 function A_(id, cat, unit, name, icon, mode, uom, dir, goal, items, t4, t3, t2, src) {
-  return [id, cat, unit, name, icon, mode, uom, dir, goal, items, t4, t3, t2, 'Y', src];
+  return [id, cat, unit, name, icon, mode, uom, dir, goal, items, t4, t3, t2, 'Y', src, '', '', '', ''];
 }
 function health_(id, unit, name, icon) {
   return [id, '健康', unit, name, icon, 'level', '', '', '依教案「' + name + '」的學習重點，評估學生整體表現',
-    '', '', '', '', 'N', '教案'];
+    '', '', '', '', 'N', '教案', '', '', '', ''];
 }
 
 // 所有門檻皆為暫定建議值，不是教案原文，可依班級實際情況調整。
@@ -79,6 +81,8 @@ var DEFAULT_ACTIVITIES = [
   health_('HLT09', '健5-1', '營養的食物', '🥦'), health_('HLT10', '健5-2', '健康飲食聰明吃', '🍎')
 ];
 
+var SCORE_NOTE = '【等級換算成績】留空＝用預設 優100／達成93／接近89／加油85。\n想讓某個活動的分數不同，就在該列填數字（例如 優分 98）。可依班級實際情況調整。';
+
 var DEFAULT_CATEGORIES = ['跑步', '跳繩', '球類', '平衡', '呼拉圈', '安全與態度', '健康'];
 
 /* ───────────────────────── 建立與維護（在 Apps Script 編輯器執行） ───────────────────────── */
@@ -104,6 +108,7 @@ function setup() {
     sh.getRange('K1:M1').setNote(tip);
     sh.getRange('N1').setNote('Y＝這學期要顯示；N＝隱藏。直接改這欄即可增減網站上的活動，不必改程式。');
     sh.getRange('O1').setNote('教案＝對應教案 PDF 單元；自訂＝老師自己加的');
+    sh.getRange('P1:S1').setNote(SCORE_NOTE);
     sh.getRange('A1').setNote('新增活動：在最下面新增一列，活動ID 不可重複。改完按網站右上角 ↻ 即可看到。');
   });
   makeSheet_(ss, SHEETS.score, H_SCORE, [], created, kept, function (sh) {
@@ -115,15 +120,34 @@ function setup() {
     sh.getRange('A:A').setNumberFormat('@');
   });
 
+  var upgraded = upgradeColumns_(ss);
   var pc = ensurePasscode_();
   var msg = (created.length ? '已建立分頁：' + created.join('、') + '\n' : '') +
     (kept.length ? '已存在、未更動：' + kept.join('、') + '\n' : '') +
+    (upgraded.length ? '已在既有分頁補上新欄位（只加表頭，不動資料）：' + upgraded.join('、') + '\n' : '') +
     (pc.isNew ? '\n教師通行碼（請記下，網站第一次開啟要輸入）：' + pc.code + '\n之後可從選單「體育成績 → 設定通行碼」更改。' :
       '\n通行碼沿用原本設定（可從選單「體育成績 → 設定通行碼」更改）。') +
     '\n\n下一步：到「班級名單」分頁填入班級與學生，再部署為網頁應用程式。';
   Logger.log(msg);
   ui_(function (ui) { ui.alert('體育成績 — 設定完成', msg, ui.ButtonSet.OK); });
   return msg;
+}
+
+/** 舊版分頁補上新欄位表頭（只寫空白的表頭格，絕不動資料）。回傳有補的分頁名稱。 */
+function upgradeColumns_(ss) {
+  var done = [];
+  [[SHEETS.act, H_ACT, SCORE_NOTE], [SHEETS.score, H_SCORE, null]].forEach(function (t) {
+    var sh = ss.getSheetByName(t[0]);
+    if (!sh) return;
+    var need = t[1].length;
+    if (sh.getMaxColumns() < need) sh.insertColumnsAfter(sh.getMaxColumns(), need - sh.getMaxColumns());
+    var cur = sh.getRange(1, 1, 1, need).getValues()[0], changed = false;
+    for (var i = 0; i < need; i++) {
+      if (String(cur[i]) === '') { sh.getRange(1, i + 1).setValue(t[1][i]).setFontWeight('bold').setBackground('#e8f0fe'); changed = true; }
+    }
+    if (changed) { done.push(t[0]); if (t[2]) sh.getRange(1, 16, 1, 4).setNote(t[2]); }
+  });
+  return done;
 }
 
 /** 只補上「活動設定」裡缺少的預設活動（以活動ID 判斷），不修改任何現有列。 */
@@ -188,7 +212,7 @@ function bootstrap_(req) {
   var cats = DEFAULT_CATEGORIES.filter(function (c) { return acts.some(function (a) { return a.cat === c; }); });
   acts.forEach(function (a) { if (a.cat && cats.indexOf(a.cat) < 0) cats.push(a.cat); });
 
-  var days = Number(req.days) > 0 ? Number(req.days) : DEFAULT_DAYS;
+  var days = Number(req.days) > 0 ? Math.min(Number(req.days), 800) : DEFAULT_DAYS;
   var cutoff = Utilities.formatDate(new Date(Date.now() - days * 86400000), TZ, 'yyyy-MM-dd');
   var scores = [];
   var sh = ss.getSheetByName(SHEETS.score);
@@ -221,6 +245,7 @@ function save_(req) {
     var ss = SpreadsheetApp.getActiveSpreadsheet();
     var sh = ss.getSheetByName(SHEETS.score);
     if (!sh) return { ok: false, error: '尚未執行 setup()' };
+    upgradeColumns_(ss);                  // 舊版試算表自動補上新欄位
     var acts = {};
     readActivities_().forEach(function (a) { acts[a.id] = a; });
     var names = rosterNames_();
@@ -245,7 +270,8 @@ function save_(req) {
       var value = (absent || rec.value == null || rec.value === '' || isNaN(rec.value)) ? '' : Number(rec.value);
       var grade = absent ? '' : gradeOf_(act, value);
       var row = [stamp, date, cls, no, names[cls + '|' + no] || '', aid, value, grade == null ? '' : grade,
-        absent ? 'Y' : '', String(rec.note || '').slice(0, 300), key, absent ? '' : String(rec.detail || '')];
+        absent ? 'Y' : '', String(rec.note || '').slice(0, 300), key, absent ? '' : String(rec.detail || ''),
+        (grade === '' || grade == null) ? '' : scoreOfGrade_(act, grade)];
       if (rowOf[key]) updates.push([rowOf[key], row]);
       else if (appendIdx[key] != null) appends[appendIdx[key]] = row;
       else { appendIdx[key] = appends.length; appends.push(row); }
@@ -293,12 +319,19 @@ function gradeOf_(act, v) {
   return v >= act.t4 ? 4 : v >= act.t3 ? 3 : v >= act.t2 ? 2 : 1;
 }
 
+/** 等級 → 分數（該活動有自訂分數就用，否則用預設）。 */
+function scoreOfGrade_(act, g) {
+  var v = act && act.sc ? act.sc[4 - g] : DEFAULT_SCORES[4 - g];
+  return v == null ? DEFAULT_SCORES[4 - g] : v;
+}
+
 function readActivities_() {
   var sh = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SHEETS.act);
   if (!sh || sh.getLastRow() < 2) return [];
   var num = function (v) { return v === '' || v == null || isNaN(v) ? null : Number(v); };
   var out = [];
-  sh.getRange(2, 1, sh.getLastRow() - 1, H_ACT.length).getValues().forEach(function (r) {
+  var ncol = Math.min(H_ACT.length, sh.getMaxColumns());
+  sh.getRange(2, 1, sh.getLastRow() - 1, ncol).getValues().forEach(function (r) {
     var id = String(r[0]).trim();
     if (!id) return;
     var mode = String(r[5]).trim().toLowerCase();
@@ -309,7 +342,8 @@ function readActivities_() {
       goal: String(r[8]).trim(),
       items: String(r[9]).split(/[｜|]/).map(function (s) { return s.trim(); }).filter(String),
       t4: num(r[10]), t3: num(r[11]), t2: num(r[12]),
-      on: String(r[13]).trim().toUpperCase() !== 'N', src: String(r[14]).trim()
+      on: String(r[13]).trim().toUpperCase() !== 'N', src: String(r[14]).trim(),
+      sc: [0, 1, 2, 3].map(function (i) { var v = num(r[15 + i]); return v == null ? DEFAULT_SCORES[i] : v; })
     });
   });
   return out;

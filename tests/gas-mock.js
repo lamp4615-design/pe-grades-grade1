@@ -10,6 +10,8 @@ class Sheet {
   constructor(name) { this.name = name; this.rows = []; this.notes = {}; this.stats = { getRange: 0, setValues: 0, deleteRow: 0 }; }
   _ensure(r, c) { while (this.rows.length < r) this.rows.push([]); for (let i = 0; i < r; i++) while (this.rows[i].length < c) this.rows[i].push(''); }
   getLastRow() { let last = 0; this.rows.forEach((r, i) => { if (r.some(v => v !== '' && v != null)) last = i + 1; }); return last; }
+  getMaxColumns() { return 26; }
+  insertColumnsAfter() { }
   getLastColumn() { return Math.max(0, ...this.rows.map(r => r.length)); }
   getDataRange() { return this.getRange(1, 1, Math.max(this.getLastRow(), 1), Math.max(this.getLastColumn(), 1)); }
   getRange(a, b, c, d) {
@@ -27,6 +29,7 @@ class Sheet {
         return rng.self;
       },
       clearContent() { sh._ensure(r0 + nr - 1, c0 + nc - 1); for (let i = 0; i < nr; i++) for (let j = 0; j < nc; j++) sh.rows[r0 - 1 + i][c0 - 1 + j] = ''; return rng.self; },
+      setValue(v) { sh._ensure(r0, c0); sh.rows[r0 - 1][c0 - 1] = v; return rng.self; },
       setNote(t) { sh.notes[`${r0},${c0}`] = t; return rng.self; }
     };
     const prx = new Proxy(rng, { get: (t, p) => (p in t ? t[p] : () => prx) });

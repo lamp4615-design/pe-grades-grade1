@@ -1,0 +1,459 @@
+<!doctype html>
+<html lang="zh-Hant-TW">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light">
+<title>教師後台・體育成績</title>
+<style>
+:root{--bg:#f4f6f8;--ink:#1f2933;--mute:#667085;--line:#d9dee5;--brand:#2455d6;
+  --g4:#0e7490;--g3:#16a34a;--g2:#d97706;--g1:#dc2626;--g4t:#d9f1f6;--g3t:#dcf5e3;--g2t:#fdeccd;--g1t:#fde0e0;--abst:#e8ebef;--r:12px}
+*{box-sizing:border-box}
+body{margin:0;font:15px/1.5 system-ui,-apple-system,"Noto Sans TC","Microsoft JhengHei",sans-serif;background:var(--bg);color:var(--ink)}
+button,select,input{font:inherit;color:inherit}
+button{cursor:pointer;border:1px solid var(--line);background:#fff;border-radius:10px;min-height:40px;padding:0 14px}
+button.primary{background:var(--brand);border-color:var(--brand);color:#fff;font-weight:600}
+select,input[type=date],input[type=text],input[type=password],input[type=search]{min-height:40px;border:1px solid var(--line);border-radius:10px;padding:0 10px;background:#fff;max-width:100%}
+[hidden]{display:none!important}
+a{color:var(--brand)}
+header{position:sticky;top:0;z-index:30;background:#fff;border-bottom:1px solid var(--line)}
+.top{display:flex;gap:8px;align-items:center;padding:8px 16px;flex-wrap:wrap}
+.top h1{font-size:1.1rem;margin:0 8px 0 0}
+.tabs{display:flex;gap:2px;overflow-x:auto;padding:0 8px;border-top:1px solid #eef0f3}
+.tabs button{border:0;border-bottom:3px solid transparent;border-radius:0;background:none;color:var(--mute);font-weight:600;white-space:nowrap;min-height:44px}
+.tabs button.on{color:var(--brand);border-bottom-color:var(--brand)}
+.grow{flex:1}
+.filters{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.filters label{display:flex;gap:4px;align-items:center;color:var(--mute);font-size:.88rem}
+main{max-width:1240px;margin:0 auto;padding:14px 16px 60px}
+.panel{background:#fff;border:1px solid var(--line);border-radius:var(--r);padding:12px 14px;margin-bottom:14px}
+.panel h2{font-size:1.02rem;margin:0 0 8px;display:flex;gap:8px;align-items:baseline;flex-wrap:wrap}
+.panel h2 small{color:var(--mute);font-weight:400}
+.grid{display:grid;gap:12px}
+.g-kpi{grid-template-columns:repeat(auto-fit,minmax(150px,1fr))}
+.g-2{grid-template-columns:repeat(auto-fit,minmax(340px,1fr))}
+.g-cls{grid-template-columns:repeat(auto-fill,minmax(270px,1fr))}
+.kpi{background:#fff;border:1px solid var(--line);border-radius:var(--r);padding:10px 14px}
+.kpi .v{font-size:1.9rem;font-weight:800;line-height:1.15}
+.kpi .l{color:var(--mute);font-size:.86rem}
+.kpi .s{font-size:.8rem;color:var(--mute)}
+.insight{margin:0 0 14px;padding:12px 16px;background:#eef3ff;border:1px solid #cfdcff;border-radius:var(--r)}
+.insight li{margin:2px 0}
+.pill{display:inline-flex;align-items:center;gap:4px;padding:1px 10px;border-radius:999px;font-size:.85rem;font-weight:600;background:var(--abst);color:#333;white-space:nowrap}
+.g4{--c:var(--g4);--t:var(--g4t)} .g3{--c:var(--g3);--t:var(--g3t)} .g2{--c:var(--g2);--t:var(--g2t)} .g1{--c:var(--g1);--t:var(--g1t)}
+.pill.g4,.pill.g3,.pill.g2,.pill.g1{background:var(--t);color:var(--c)}
+.pill.warn{background:#fff3cd;color:#8a5a00} .pill.bad{background:var(--g1t);color:var(--g1)} .pill.good{background:var(--g3t);color:#117a37}
+.cc{border:1px solid var(--line);border-radius:var(--r);background:#fff;padding:12px;cursor:pointer;text-align:left;min-height:0;display:block;width:100%}
+.cc:hover{border-color:var(--brand);box-shadow:0 2px 10px rgba(36,85,214,.15)}
+.cc .big{font-size:2.2rem;font-weight:800;line-height:1}
+.cc .row{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+.stack{display:flex;height:10px;border-radius:5px;overflow:hidden;background:#e3e7ec;margin-top:8px}
+.stack i{display:block;height:100%}
+.stack .g4{background:var(--g4)} .stack .g3{background:var(--g3)} .stack .g2{background:var(--g2)} .stack .g1{background:var(--g1)}
+.hbar{display:grid;grid-template-columns:minmax(80px,150px) 1fr 52px;gap:8px;align-items:center;margin:5px 0;font-size:.92rem}
+.hbar .t{background:#e3e7ec;border-radius:6px;height:16px;overflow:hidden}
+.hbar .t i{display:block;height:100%;background:var(--c,var(--brand))}
+.hbar .n{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.hist{display:flex;align-items:flex-end;gap:12px;height:150px;padding-top:8px}
+.hist div{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;font-size:.85rem}
+.hist i{display:block;width:100%;max-width:80px;background:var(--c);border-radius:6px 6px 0 0;min-height:2px}
+.hist b{font-size:1rem}
+table{border-collapse:separate;border-spacing:0;width:100%}
+th,td{padding:7px 8px;border-bottom:1px solid #edf0f3;text-align:center;font-size:.92rem}
+th{background:#f0f3f8;position:sticky;top:0;z-index:2;font-weight:600;cursor:default}
+th.sort{cursor:pointer} th.sort:hover{background:#e4e9f2}
+td.l,th.l{text-align:left}
+tbody tr:hover td{background:#f8faff}
+tr.click{cursor:pointer}
+.wrap{overflow:auto;max-height:74vh;border:1px solid var(--line);border-radius:10px}
+.wrap th.s1,.wrap td.s1{position:sticky;left:0;background:#fff;z-index:1;text-align:left;white-space:nowrap}
+.wrap th.s1{z-index:3;background:#f0f3f8}
+.sc{font-weight:700;border-radius:6px;padding:2px 8px;display:inline-block;min-width:3em;background:var(--t,#eee);color:var(--c,#333)}
+.up{color:var(--g3);font-weight:700} .down{color:var(--g1);font-weight:700} .flat{color:var(--mute)}
+.chips{display:flex;gap:6px;flex-wrap:wrap}
+.person{display:flex;gap:10px;align-items:center;padding:8px 0;border-bottom:1px solid #edf0f3;flex-wrap:wrap;cursor:pointer}
+.person:hover{background:#f8faff}
+.person .nm{font-weight:700;min-width:7em}
+.empty{padding:28px;text-align:center;color:var(--mute)}
+#drawer{position:fixed;top:0;right:0;bottom:0;width:min(460px,100%);background:#fff;z-index:60;box-shadow:-6px 0 24px rgba(0,0,0,.22);transform:translateX(105%);transition:transform .2s;overflow:auto;padding:14px}
+#drawer.open{transform:none}
+.dact{border-top:1px solid var(--line);padding:8px 0}
+.dact .hd{display:flex;gap:8px;align-items:center;font-weight:600;flex-wrap:wrap}
+#modal{position:fixed;inset:0;z-index:80;background:rgba(15,23,42,.5);display:flex;align-items:center;justify-content:center;padding:16px}
+#modal .box{background:#fff;border-radius:16px;padding:18px;width:min(420px,100%)}
+#toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);z-index:90;background:#1f2933;color:#fff;border-radius:10px;padding:8px 14px}
+.note{color:var(--mute);font-size:.86rem}
+@media print{
+  @page{size:A4 landscape;margin:10mm}
+  header,#drawer,#modal,#toast,.noprint{display:none!important}
+  body{background:#fff;font-size:11px} main{max-width:none;padding:0}
+  .wrap{overflow:visible;max-height:none;border:0} th{position:static} .wrap th.s1,.wrap td.s1{position:static}
+  .panel{border:0;padding:0} *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+}
+</style>
+</head>
+<body>
+<header>
+  <div class="top">
+    <h1>📊 教師後台</h1>
+    <div class="filters">
+      <select id="fCls" aria-label="班級"></select>
+      <label>從<input type="date" id="fFrom"></label>
+      <label>到<input type="date" id="fTo"></label>
+      <select id="fMode" aria-label="總分算法" title="總分怎麼算">
+        <option value="cat">總分＝各類別平均再平均</option>
+        <option value="act">總分＝各活動平均</option>
+      </select>
+    </div>
+    <span class="grow"></span>
+    <span id="stamp" class="note"></span>
+    <button id="btnRefresh" title="重新載入">↻</button>
+    <a href="index.html" style="text-decoration:none"><button>← 登記頁</button></a>
+  </div>
+  <nav class="tabs" id="tabs">
+    <button data-tab="home">班級總覽</button><button data-tab="cls">班級分析</button><button data-tab="stu">學生成績表</button><button data-tab="todo">待處理</button><button data-tab="report">學期成績單</button>
+  </nav>
+</header>
+<main id="main"></main>
+<aside id="drawer" aria-label="學生詳情"></aside>
+<div id="modal" hidden></div>
+<div id="toast" hidden></div>
+
+<script>
+(() => {
+'use strict';
+/* 與 index.html 相同的後端網址與登入資訊（同一個網站，登記頁登入過這裡就直接可用）。 */
+const DEFAULT_API = 'https://script.google.com/macros/s/AKfycbwJqsm_tSxg2t7Tgl6D5l-WkCCS4rmNck-rxWQP-AC64rc6OxrfHxm3cIdDqEsTbos-/exec';
+const LS = { auth: 'pe1.auth', cache: 'pe1.cache', ui: 'pe1.admin.ui' };
+const SCORE_MAP = { 4: 100, 3: 93, 2: 89, 1: 85 };
+const LV = { 4: '優', 3: '達成', 2: '接近', 1: '需加油' };
+
+const $ = (s, r = document) => r.querySelector(s);
+const lsGet = (k, d) => { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch { return d; } };
+const lsSet = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch { } };
+function h(tag, a, ...kids) {
+  const e = document.createElement(tag);
+  if (a) for (const k in a) { const v = a[k]; if (v == null || v === false) continue;
+    if (k === 'class') e.className = v; else if (k === 'style') e.setAttribute('style', v); else if (k.startsWith('on')) e.addEventListener(k.slice(2), v);
+    else if (k === 'value') e.value = v; else e.setAttribute(k, v === true ? '' : v); }
+  for (const c of kids.flat(3)) if (c != null && c !== false) e.append(c.nodeType ? c : String(c));
+  return e;
+}
+const NS = 'http://www.w3.org/2000/svg';
+function sv(tag, a, ...kids) { const e = document.createElementNS(NS, tag); for (const k in a || {}) e.setAttribute(k, a[k]); for (const c of kids.flat()) if (c != null) e.append(c.nodeType ? c : String(c)); return e; }
+const mean = a => a.length ? a.reduce((x, y) => x + y, 0) / a.length : null;
+const f1 = n => n == null ? '–' : (Math.round(n * 10) / 10).toFixed(1);
+const f0 = n => n == null ? '–' : String(Math.round(n));
+const pct = n => n == null ? '–' : Math.round(n * 100) + '%';
+const todayStr = () => { const d = new Date(), p = n => String(n).padStart(2, '0'); return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`; };
+const md = d => `${Number(d.slice(5, 7))}/${Number(d.slice(8, 10))}`;
+const scoreOf = (act, g) => g ? (act && act.sc ? act.sc[4 - g] : SCORE_MAP[g]) : null;
+/* 分數 → 顏色帶（依預設換算 100/93/89/85 的中點切分） */
+const band = v => v == null ? '' : v >= 96.5 ? 'g4' : v >= 91 ? 'g3' : v >= 87 ? 'g2' : 'g1';
+const bandLabel = v => v == null ? '' : v >= 96.5 ? '優異' : v >= 91 ? '達成' : v >= 87 ? '接近' : '需加油';
+
+/* ════════ 狀態 ════════ */
+const S = { cfg: { activities: [], units: [], categories: [] }, classes: {}, classOrder: [], scores: new Map(), ver: 0, at: '' };
+let auth = lsGet(LS.auth, { url: '', key: '' });
+const st = Object.assign({ tab: 'home', cls: '', from: '', to: '', mode: 'cat', q: '', sk: 'no', sd: 1, onlyFlag: false }, lsGet(LS.ui, {}));
+const saveSt = () => lsSet(LS.ui, st);
+const fromRow = a => ({ date: a[0], cls: String(a[1]), no: Number(a[2]), aid: String(a[3]), value: a[4], grade: a[5], absent: !!a[6], note: a[7] || '', detail: a[8] || '' });
+function apply(j) {
+  S.cfg = j.cfg; S.classes = j.classes || {}; S.classOrder = j.classOrder || Object.keys(S.classes); S.scores = new Map();
+  for (const a of j.scores || []) { const r = fromRow(a); S.scores.set(`${r.date}|${r.cls}|${r.no}|${r.aid}`, r); }
+  S.ver++;
+}
+function toast(m) { const t = $('#toast'); t.textContent = m; t.hidden = false; clearTimeout(toast.t); toast.t = setTimeout(() => t.hidden = true, 2600); }
+async function load(manual) {
+  const url = DEFAULT_API || auth.url;
+  if (!url || !auth.key) { login(); return; }
+  try {
+    const ctl = new AbortController(); const to = setTimeout(() => ctl.abort(), 30000);
+    const r = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ action: 'bootstrap', days: 400, key: auth.key }), signal: ctl.signal });
+    clearTimeout(to);
+    const j = await r.json();
+    if (j.error === 'auth') { login('通行碼不正確'); return; }
+    if (!j.ok) throw new Error(j.error);
+    apply(j); S.at = new Date().toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' }); render(); if (manual) toast('已更新');
+  } catch (e) { toast('載入失敗：' + (e.name === 'AbortError' ? '逾時' : e.message) + (S.scores.size ? '（顯示本機快取）' : '')); if (!S.scores.size) $('#main').replaceChildren(h('div', { class: 'empty' }, '連不上後端，請檢查網路後按 ↻。')); }
+}
+function login(msg) {
+  const m = $('#modal'); m.hidden = false;
+  const key = h('input', { type: 'password', placeholder: '教師通行碼', style: 'width:100%' });
+  const err = h('div', { style: 'color:var(--g1);min-height:1.3em' }, msg || '');
+  const go = () => { auth = { url: auth.url, key: key.value.trim() }; if (!auth.key) return; lsSet(LS.auth, auth); m.hidden = true; load(); };
+  key.addEventListener('keydown', e => { if (e.key === 'Enter') go(); });
+  m.replaceChildren(h('div', { class: 'box' }, h('h2', { style: 'margin-top:0' }, '🔒 教師登入'), h('p', { class: 'note' }, '輸入與登記頁相同的通行碼。'), key, err, h('div', { style: 'text-align:right;margin-top:10px' }, h('button', { class: 'primary', onclick: go }, '進入'))));
+  key.focus();
+}
+
+/* ════════ 分析核心 ════════ */
+let memo = { key: '', val: null };
+const acts = () => S.cfg.activities.filter(a => a.on);
+function analyze(cls) {
+  const key = [cls, st.from, st.to, st.mode, S.ver].join('|');
+  const cached = analyze.c || (analyze.c = new Map());
+  if (cached.get(cls) && cached.get(cls).key === key) return cached.get(cls).val;
+  const roster = S.classes[cls] || [], aMap = new Map(acts().map(a => [a.id, a])), order = new Map(S.cfg.activities.map((a, i) => [a.id, i]));
+  const stuMap = new Map(roster.map(([no, name]) => [no, { no, name, list: new Map() }]));
+  const started = new Set(), byDate = new Map();
+  for (const r of S.scores.values()) {
+    if (r.cls !== cls) continue;
+    const s = stuMap.get(r.no), a = aMap.get(r.aid); if (!s || !a) continue;
+    if ((st.from && r.date < st.from) || (st.to && r.date > st.to)) continue;
+    started.add(r.aid);
+    let l = s.list.get(r.aid); if (!l) s.list.set(r.aid, l = []); l.push(r);
+    if (r.grade != null) { let d = byDate.get(r.date); if (!d) byDate.set(r.date, d = []); d.push(scoreOf(a, r.grade)); }
+  }
+  const ci = c => { const i = S.cfg.categories.indexOf(c); return i < 0 ? 99 : i; };
+  const actList = [...started].map(id => aMap.get(id)).sort((x, y) => ci(x.cat) - ci(y.cat) || order.get(x.id) - order.get(y.id));
+  const cats = [...new Set(actList.map(a => a.cat))];
+  const students = [...stuMap.values()].map(s => {
+    s.cell = new Map(); s.abs = 0; s.pend = []; s.notes = [];
+    for (const a of actList) {
+      const l = (s.list.get(a.id) || []).sort((x, y) => x.date.localeCompare(y.date));
+      const att = l.filter(r => r.grade != null), last = att[att.length - 1];
+      s.abs += l.filter(r => r.absent).length;
+      const la = [...l].reverse().find(r => r.absent);
+      if (la && (!last || la.date > last.date)) s.pend.push({ act: a, date: la.date });
+      for (const r of l) if (r.note) s.notes.push({ act: a, date: r.date, note: r.note });
+      if (last) s.cell.set(a.id, { act: a, grade: last.grade, score: scoreOf(a, last.grade), rec: last, att, all: l });
+    }
+    const cells = [...s.cell.values()];
+    s.catScore = new Map(cats.map(c => [c, mean(cells.filter(x => x.act.cat === c).map(x => x.score))]));
+    const cs = [...s.catScore.values()].filter(v => v != null);
+    s.total = st.mode === 'cat' ? mean(cs) : mean(cells.map(x => x.score));
+    s.avgGrade = mean(cells.map(x => x.grade)); s.ones = cells.filter(x => x.grade === 1).length; s.n = cells.length;
+    const deltas = cells.filter(x => x.att.length >= 2).map(x => x.att[x.att.length - 1].grade - x.att[0].grade);
+    s.trend = deltas.length ? mean(deltas) : null;
+    s.drops = cells.filter(x => x.att.length >= 2 && x.att[x.att.length - 1].grade <= x.att[x.att.length - 2].grade - 2).map(x => x.act);
+    s.reasons = []; s.watch = [];
+    if (s.n) {
+      if (s.avgGrade < 2) s.reasons.push('整體偏低');
+      if (s.ones >= Math.max(2, Math.ceil(s.n * 0.25))) s.reasons.push(`${s.ones} 項需加油`);
+      if (s.drops.length >= 2) s.reasons.push(`${s.drops.length} 項明顯退步（如「${s.drops[0].name}」）`);
+      else if (s.drops.length === 1) s.watch.push(`「${s.drops[0].name}」明顯退步`);
+    }
+    if (s.abs >= 4 || s.pend.length >= 3) s.reasons.push(`缺席 ${s.abs} 次${s.pend.length ? `（${s.pend.length} 項待補測）` : ''}`);
+    s.flag = s.reasons.length > 0; s.watchOnly = !s.flag && s.watch.length > 0; s.star = s.n >= 3 && s.avgGrade >= 3.5 && s.ones === 0;
+    return s;
+  });
+  const cellsAll = students.flatMap(s => [...s.cell.values()]);
+  const totals = students.map(s => s.total).filter(v => v != null);
+  const byAct = actList.map(a => {
+    const cs = students.map(s => s.cell.get(a.id)).filter(Boolean);
+    const dist = { 4: 0, 3: 0, 2: 0, 1: 0 }; cs.forEach(c => dist[c.grade]++);
+    const missing = students.filter(s => !(s.list.get(a.id) || []).length);
+    return { act: a, n: cs.length, avg: mean(cs.map(c => c.score)), rate: cs.length ? cs.filter(c => c.grade >= 3).length / cs.length : null, dist, missing };
+  });
+  const byCat = cats.map(c => ({ cat: c, avg: mean(students.map(s => s.catScore.get(c)).filter(v => v != null)), rate: (() => { const cs = cellsAll.filter(x => x.act.cat === c); return cs.length ? cs.filter(x => x.grade >= 3).length / cs.length : null; })() }));
+  const series = [...byDate.entries()].sort((x, y) => x[0].localeCompare(y[0])).map(([date, v]) => ({ date, avg: mean(v), n: v.length }));
+  const filled = students.reduce((n, s) => n + [...s.list.values()].filter(l => l.length).length, 0);
+  const val = {
+    cls, students, actList, cats, byAct, byCat, series, totals,
+    avg: mean(totals), max: totals.length ? Math.max(...totals) : null, min: totals.length ? Math.min(...totals) : null,
+    rate: cellsAll.length ? cellsAll.filter(c => c.grade >= 3).length / cellsAll.length : null,
+    complete: students.length && actList.length ? filled / (students.length * actList.length) : null,
+    flagged: students.filter(s => s.flag), watchers: students.filter(s => s.watchOnly), stars: students.filter(s => s.star), pend: students.reduce((n, s) => n + s.pend.length, 0),
+    dist: { 4: cellsAll.filter(c => c.grade === 4).length, 3: cellsAll.filter(c => c.grade === 3).length, 2: cellsAll.filter(c => c.grade === 2).length, 1: cellsAll.filter(c => c.grade === 1).length }
+  };
+  cached.set(cls, { key, val });
+  return val;
+}
+
+/* ════════ 小圖表 ════════ */
+function stack(d) { const t = d[4] + d[3] + d[2] + d[1]; return h('div', { class: 'stack', title: `優 ${d[4]}・達成 ${d[3]}・接近 ${d[2]}・需加油 ${d[1]}` }, [4, 3, 2, 1].map(g => d[g] ? h('i', { class: 'g' + g, style: `width:${d[g] / t * 100}%` }) : null)); }
+function hbar(label, v, lo, hi, text, cls) { const p = v == null ? 0 : Math.max(0, Math.min(1, (v - lo) / (hi - lo))); return h('div', { class: 'hbar' }, h('span', { class: 'n', title: label }, label), h('div', { class: 't ' + (cls || '') }, h('i', { style: `width:${p * 100}%` })), h('b', null, text)); }
+function histogram(totals) {
+  const bins = [['85–89', 0, 89.5], ['90–93', 89.5, 93.5], ['94–96', 93.5, 96.5], ['97–100', 96.5, 101]];
+  const cnt = bins.map(([, lo, hi]) => totals.filter(v => v >= lo && v < hi).length), mx = Math.max(1, ...cnt), cls = ['g1', 'g2', 'g3', 'g4'];
+  return h('div', { class: 'hist' }, bins.map(([l], i) => h('div', { class: cls[i] }, h('b', null, cnt[i]), h('i', { style: `height:${cnt[i] / mx * 100}px` }), h('span', { class: 'note' }, l + ' 分'))));
+}
+function lineChart(series) {
+  if (series.length < 2) return h('div', { class: 'empty' }, series.length ? `目前只有 1 次登記日（${md(series[0].date)}：平均 ${f1(series[0].avg)} 分），累積 2 次以上才會畫出趨勢。` : '還沒有資料');
+  const W = 560, H = 170, L = 34, R = 10, T = 10, B = 24, lo = 80, hi = 100;
+  const x = i => L + (W - L - R) * (series.length === 1 ? .5 : i / (series.length - 1)), y = v => T + (H - T - B) * (1 - (Math.max(lo, Math.min(hi, v)) - lo) / (hi - lo));
+  const g = sv('svg', { viewBox: `0 0 ${W} ${H}`, width: '100%', role: 'img', 'aria-label': '各登記日平均分數趨勢' });
+  for (const v of [80, 85, 90, 95, 100]) { g.append(sv('line', { x1: L, x2: W - R, y1: y(v), y2: y(v), stroke: '#e3e7ec' }), sv('text', { x: L - 4, y: y(v) + 4, 'text-anchor': 'end', 'font-size': 10, fill: '#667085' }, v)); }
+  g.append(sv('polyline', { points: series.map((p, i) => `${x(i)},${y(p.avg)}`).join(' '), fill: 'none', stroke: '#2455d6', 'stroke-width': 2.5 }));
+  series.forEach((p, i) => { const c = sv('circle', { cx: x(i), cy: y(p.avg), r: 4, fill: '#2455d6' }); c.append(sv('title', {}, `${p.date}：平均 ${f1(p.avg)} 分（${p.n} 筆）`)); g.append(c);
+    if (series.length <= 14 || i % Math.ceil(series.length / 12) === 0) g.append(sv('text', { x: x(i), y: H - 6, 'text-anchor': i === series.length - 1 && series.length > 3 ? 'end' : 'middle', 'font-size': 10, fill: '#667085' }, md(p.date))); });
+  return g;
+}
+function radar(cats, vals) {
+  const S0 = 230, c = S0 / 2, R = 78, n = cats.length;
+  if (n < 3) return h('div', { class: 'note' }, '類別少於 3 個，改用下方清單。');
+  const pt = (i, v) => { const a = -Math.PI / 2 + 2 * Math.PI * i / n, r = R * (Math.max(80, Math.min(100, v)) - 80) / 20; return [c + r * Math.cos(a), c + r * Math.sin(a)]; };
+  const g = sv('svg', { viewBox: `0 0 ${S0} ${S0}`, width: 230, height: 230, role: 'img', 'aria-label': '各類別分數雷達圖' });
+  for (const v of [85, 90, 95, 100]) g.append(sv('polygon', { points: cats.map((_, i) => pt(i, v).join(',')).join(' '), fill: 'none', stroke: v === 100 ? '#b9c2d0' : '#e3e7ec' }));
+  cats.forEach((cn, i) => { const [ex, ey] = pt(i, 100), a = -Math.PI / 2 + 2 * Math.PI * i / n; g.append(sv('line', { x1: c, y1: c, x2: ex, y2: ey, stroke: '#e3e7ec' }), sv('text', { x: c + (R + 18) * Math.cos(a), y: c + (R + 14) * Math.sin(a) + 4, 'text-anchor': 'middle', 'font-size': 11, fill: '#1f2933' }, cn)); });
+  g.append(sv('polygon', { points: vals.map((v, i) => pt(i, v ?? 80).join(',')).join(' '), fill: 'rgba(36,85,214,.25)', stroke: '#2455d6', 'stroke-width': 2 }));
+  vals.forEach((v, i) => { if (v != null) { const [px, py] = pt(i, v); const d = sv('circle', { cx: px, cy: py, r: 3.5, fill: '#2455d6' }); d.append(sv('title', {}, `${cats[i]}：${f1(v)} 分`)); g.append(d); } });
+  return g;
+}
+
+/* ════════ 各分頁 ════════ */
+const sc = (v, extra) => h('span', { class: 'sc ' + band(v), title: bandLabel(v) }, v == null ? '–' : f1(v), extra);
+function clsSelect() { const s = $('#fCls'); s.replaceChildren(...S.classOrder.map(c => h('option', { value: c, selected: c === st.cls }, c))); }
+function go(tab, cls) { if (cls) st.cls = cls; st.tab = tab; saveSt(); render(); window.scrollTo(0, 0); }
+
+function viewHome() {
+  const all = S.classOrder.map(analyze), today = todayStr();
+  const todayN = [...S.scores.values()].filter(r => r.date === today).length;
+  const lastDate = [...S.scores.values()].map(r => r.date).sort().pop();
+  const totalStu = all.reduce((n, a) => n + a.students.length, 0);
+  const everyone = all.flatMap(a => a.totals);
+  return [
+    h('div', { class: 'grid g-kpi', style: 'margin-bottom:14px' },
+      kpi('全校平均分', f1(mean(everyone)), `${S.classOrder.length} 班・${totalStu} 位學生`), kpi('今日登記', todayN + ' 筆', lastDate ? `最近登記日 ${md(lastDate)}` : '尚無成績'),
+      kpi('需關注學生', all.reduce((n, a) => n + a.flagged.length, 0) + ' 位', '點班級卡片查看'), kpi('待補測', all.reduce((n, a) => n + a.pend, 0) + ' 項', '缺席後尚未補登')),
+    h('div', { class: 'grid g-cls' }, all.map(A => h('button', { class: 'cc', onclick: () => go('cls', A.cls), 'aria-label': `${A.cls} 班級分析` },
+      h('div', { style: 'display:flex;justify-content:space-between;align-items:baseline' }, h('b', { style: 'font-size:1.15rem' }, A.cls), h('span', { class: 'note' }, `${A.students.length} 人・${A.actList.length} 個活動`)),
+      h('div', { style: 'display:flex;gap:12px;align-items:baseline;margin-top:6px' }, h('span', { class: 'big ' + band(A.avg), style: 'color:var(--c,#1f2933)' }, f1(A.avg)), h('span', { class: 'note' }, '平均分')),
+      A.actList.length ? stack(A.dist) : null,
+      h('div', { class: 'row' }, h('span', { class: 'pill ' + (A.rate >= .7 ? 'good' : A.rate >= .5 ? 'warn' : 'bad') }, '達成率 ' + pct(A.rate)), h('span', { class: 'pill' }, '登記完成 ' + pct(A.complete)),
+        A.flagged.length ? h('span', { class: 'pill bad' }, `關注 ${A.flagged.length}`) : h('span', { class: 'pill good' }, '無需關注'), A.pend ? h('span', { class: 'pill warn' }, `待補測 ${A.pend}`) : null)))),
+    !all.length ? h('div', { class: 'empty' }, '尚無班級。請到 Google Sheet「班級名單」填入學生。') : null,
+    h('p', { class: 'note' }, '登記完成＝已有成績的「學生×活動」占比（只計算該班已開始登記的活動）。達成率＝各活動最近一次成績達「達成」以上的比例。')
+  ];
+}
+function kpi(l, v, s, cls) { return h('div', { class: 'kpi' }, h('div', { class: 'l' }, l), h('div', { class: 'v ' + (cls || '') }, v), h('div', { class: 's' }, s || '')); }
+
+function viewCls() {
+  const A = analyze(st.cls);
+  if (!A.students.length) return h('div', { class: 'empty' }, '這個班級還沒有學生。');
+  if (!A.actList.length) return h('div', { class: 'empty' }, '這個條件下還沒有任何成績。');
+  const bestA = [...A.byAct].filter(x => x.n).sort((x, y) => y.avg - x.avg)[0], worstA = [...A.byAct].filter(x => x.n).sort((x, y) => x.rate - y.rate || x.avg - y.avg)[0];
+  const cat = [...A.byCat].filter(x => x.avg != null).sort((x, y) => x.avg - y.avg);
+  const ins = [
+    `${A.cls} 平均 ${f1(A.avg)} 分（最低 ${f1(A.min)}、最高 ${f1(A.max)}），整體達成率 ${pct(A.rate)}。`,
+    worstA && worstA.rate < 0.6 ? `最需要加強：「${worstA.act.name}」（達成率 ${pct(worstA.rate)}、平均 ${f1(worstA.avg)} 分）—— 可考慮複習或調整教法。` : worstA ? `各活動達成率都在 60% 以上，相對較低的是「${worstA.act.name}」（${pct(worstA.rate)}）。` : null,
+    bestA ? `表現最好：「${bestA.act.name}」（平均 ${f1(bestA.avg)} 分）。` : null,
+    cat.length > 1 ? `類別中「${cat[0].cat}」平均最低（${f1(cat[0].avg)} 分），「${cat[cat.length - 1].cat}」最高（${f1(cat[cat.length - 1].avg)} 分）。` : null,
+    `${A.flagged.length} 位需要關注、${A.stars.length} 位表現優異${A.pend ? `、${A.pend} 項缺席待補測` : ''}。`
+  ].filter(Boolean);
+  return [
+    h('ul', { class: 'insight' }, ins.map(t => h('li', null, t))),
+    h('div', { class: 'grid g-kpi', style: 'margin-bottom:14px' }, kpi('平均分', f1(A.avg), `${A.students.length} 位學生`, band(A.avg)), kpi('達成率', pct(A.rate), '最近一次成績 ≥ 達成'), kpi('登記完成度', pct(A.complete), `${A.actList.length} 個活動`),
+      kpi('需關注', A.flagged.length + ' 位', '詳見「待處理」'), kpi('待補測', A.pend + ' 項', '缺席後未補登')),
+    h('div', { class: 'grid g-2' },
+      h('div', { class: 'panel' }, h('h2', null, '學生總分分布', h('small', null, '每人一格，看全班落在哪一段')), histogram(A.totals)),
+      h('div', { class: 'panel' }, h('h2', null, '各類別平均分'), A.byCat.map(c => hbar(c.cat, c.avg, 80, 100, f1(c.avg), band(c.avg))), h('p', { class: 'note', style: 'margin:6px 0 0' }, '長條範圍 80–100 分')),
+      h('div', { class: 'panel', style: 'grid-column:1/-1' }, h('h2', null, '班級平均分趨勢', h('small', null, '每個登記日的平均')), lineChart(A.series))),
+    h('div', { class: 'panel' }, h('h2', null, '各活動表現', h('small', null, '由弱到強排序，先看最需要加強的')),
+      h('div', { class: 'wrap' }, h('table', null, h('thead', null, h('tr', null, ['活動', '類別', '已登記', '平均分', '達成率', '等級分布'].map((t, i) => h('th', { class: i === 0 ? 'l' : '' }, t)))),
+        h('tbody', null, [...A.byAct].sort((x, y) => (x.rate ?? 9) - (y.rate ?? 9)).map(x => h('tr', null,
+          h('td', { class: 'l' }, `${x.act.icon} ${x.act.name}`), h('td', null, x.act.cat), h('td', null, `${x.n}/${A.students.length}`), h('td', null, sc(x.avg)),
+          h('td', { style: 'min-width:130px' }, hbar('', x.rate, 0, 1, pct(x.rate), x.rate >= .7 ? 'g3' : x.rate >= .5 ? 'g2' : 'g1')), h('td', { style: 'min-width:110px' }, x.n ? stack(x.dist) : '–')))))))
+  ];
+}
+
+function trendCell(s) { if (s.trend == null) return h('span', { class: 'flat' }, '–'); return s.trend > .25 ? h('span', { class: 'up' }, '↗') : s.trend < -.25 ? h('span', { class: 'down' }, '↘') : h('span', { class: 'flat' }, '→'); }
+function viewStu() {
+  const A = analyze(st.cls);
+  if (!A.actList.length) return h('div', { class: 'empty' }, '這個條件下還沒有任何成績。');
+  const keyF = { no: s => s.no, name: s => s.name, total: s => s.total ?? -1, trend: s => s.trend ?? -9, ones: s => s.ones };
+  let rows = A.students.filter(s => (!st.q || (s.name + s.no).includes(st.q.trim())) && (!st.onlyFlag || s.flag));
+  const gk = st.sk.startsWith('c:') ? (s => s.catScore.get(st.sk.slice(2)) ?? -1) : keyF[st.sk] || keyF.no;
+  rows = rows.sort((x, y) => { const a = gk(x), b = gk(y); return (typeof a === 'string' ? a.localeCompare(b) : a - b) * st.sd || x.no - y.no; });
+  const th = (t, k, cls) => h('th', { class: 'sort ' + (cls || ''), onclick: () => { st.sd = st.sk === k ? -st.sd : 1; st.sk = k; saveSt(); render(); } }, t, st.sk === k ? (st.sd > 0 ? ' ▲' : ' ▼') : '');
+  const q = h('input', { type: 'search', placeholder: '搜尋姓名或座號', value: st.q, oninput: e => { st.q = e.target.value; const pos = e.target.selectionStart; render(); const n = $('input[type=search]'); n.focus(); n.setSelectionRange(pos, pos); } });
+  return [
+    h('div', { class: 'filters noprint', style: 'margin-bottom:10px' }, q, h('label', null, h('input', { type: 'checkbox', checked: st.onlyFlag, onchange: e => { st.onlyFlag = e.target.checked; render(); } }), '只看需關注'),
+      h('span', { class: 'grow' }), h('span', { class: 'note' }, `${rows.length}/${A.students.length} 人・點欄位標題排序・點學生看詳情`)),
+    h('div', { class: 'wrap' }, h('table', null,
+      h('thead', null, h('tr', null, th('座號 姓名', 'no', 's1'), A.cats.map(c => th(c, 'c:' + c)), th('總分', 'total'), th('趨勢', 'trend'), th('需加油項數', 'ones'), h('th', null, '狀態'))),
+      h('tbody', null, rows.map(s => h('tr', { class: 'click', onclick: () => openDrawer(s.no) },
+        h('td', { class: 's1' }, h('span', { class: 'note' }, String(s.no).padStart(2, ' ') + ' '), h('b', null, s.name), s.star ? ' ⭐' : ''),
+        A.cats.map(c => h('td', null, sc(s.catScore.get(c)))), h('td', null, h('b', null, sc(s.total))), h('td', null, trendCell(s)), h('td', null, s.ones || ''),
+        h('td', null, s.flag ? h('span', { class: 'pill bad', title: s.reasons.join('、') }, '關注') : s.watchOnly ? h('span', { class: 'pill warn', title: s.watch.join('、') }, '留意') : s.n ? '' : h('span', { class: 'note' }, '無資料')))),
+        h('tr', null, h('td', { class: 's1' }, h('b', null, '全班平均')), A.cats.map(c => h('td', null, h('b', null, f1(A.byCat.find(x => x.cat === c).avg)))), h('td', null, h('b', null, f1(A.avg))), h('td'), h('td'), h('td')))))
+  ];
+}
+
+function viewTodo() {
+  const A = analyze(st.cls);
+  const flagged = [...A.flagged].sort((a, b) => (a.avgGrade ?? 9) - (b.avgGrade ?? 9));
+  const pend = A.students.flatMap(s => s.pend.map(p => ({ s, ...p }))).sort((a, b) => a.date.localeCompare(b.date));
+  const miss = A.byAct.filter(x => x.missing.length && x.missing.length < A.students.length || (x.missing.length === A.students.length && false));
+  return [
+    h('div', { class: 'panel' }, h('h2', null, `需要關注（${flagged.length}）`, h('small', null, '整體偏低、需加油項數多（至少 2 項且占 1/4 以上）、2 項以上明顯退步、缺席多次')),
+      flagged.length ? flagged.map(s => h('div', { class: 'person', onclick: () => openDrawer(s.no) }, h('span', { class: 'nm' }, `${s.no} ${s.name}`), sc(s.total), h('span', { class: 'chips' }, s.reasons.map(r => h('span', { class: 'pill bad' }, r))))) : h('div', { class: 'empty' }, '目前沒有需要特別關注的學生 👍')),
+    h('div', { class: 'panel' }, h('h2', null, `留意（${A.watchers.length}）`, h('small', null, '單一活動明顯退步（降 2 級以上），其他表現正常，觀察即可')),
+      A.watchers.length ? A.watchers.map(s => h('div', { class: 'person', onclick: () => openDrawer(s.no) }, h('span', { class: 'nm' }, `${s.no} ${s.name}`), sc(s.total), h('span', { class: 'chips' }, s.watch.map(r => h('span', { class: 'pill warn' }, r))))) : h('div', { class: 'empty' }, '沒有需要留意的學生')),
+    h('div', { class: 'panel' }, h('h2', null, `缺席待補測（${pend.length}）`, h('small', null, '缺席後同活動還沒有出席成績；補登後會自動消失')),
+      pend.length ? h('div', { class: 'wrap' }, h('table', null, h('thead', null, h('tr', null, ['學生', '活動', '類別', '缺席日'].map((t, i) => h('th', { class: i < 2 ? 'l' : '' }, t)))),
+        h('tbody', null, pend.map(p => h('tr', { class: 'click', onclick: () => openDrawer(p.s.no) }, h('td', { class: 'l' }, `${p.s.no} ${p.s.name}`), h('td', { class: 'l' }, `${p.act.icon} ${p.act.name}`), h('td', null, p.act.cat), h('td', null, md(p.date))))))) : h('div', { class: 'empty' }, '沒有待補測的紀錄 ✓')),
+    h('div', { class: 'panel' }, h('h2', null, '登記進度', h('small', null, '已開始登記的活動，還有誰沒登記')),
+      A.byAct.length ? A.byAct.map(x => h('div', { style: 'margin:8px 0' }, hbar(`${x.act.icon} ${x.act.name}`, A.students.length - x.missing.length, 0, A.students.length, `${A.students.length - x.missing.length}/${A.students.length}`, x.missing.length ? 'g2' : 'g3'),
+        x.missing.length ? h('div', { class: 'chips', style: 'margin-left:158px' }, x.missing.map(s => h('span', { class: 'pill warn' }, `${s.no} ${s.name}`))) : null)) : h('div', { class: 'empty' }, '還沒有登記任何活動'))
+  ];
+}
+
+function csvDownload(rows, name) {
+  const csv = '﻿' + rows.map(r => r.map(v => { v = String(v ?? ''); return /[",\n\r]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; }).join(',')).join('\r\n');
+  const a = h('a', { href: URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' })), download: name }); document.body.append(a); a.click(); a.remove(); toast(`已匯出 ${rows.length - 1} 列`);
+}
+function viewReport() {
+  const A = analyze(st.cls);
+  if (!A.actList.length) return h('div', { class: 'empty' }, '這個條件下還沒有任何成績。');
+  const range = st.from || st.to ? `${st.from || '起'} ～ ${st.to || '今'}` : '全部日期';
+  const exp1 = () => csvDownload([['班級', '座號', '姓名', ...A.cats, '總分', '缺席次數', '備註'], ...A.students.map(s => [A.cls, s.no, s.name, ...A.cats.map(c => { const v = s.catScore.get(c); return v == null ? '' : f1(v); }), s.total == null ? '' : f1(s.total), s.abs || '', s.notes.map(n => `${md(n.date)}${n.act.name}:${n.note}`).join('；')])], `成績單_${A.cls}_${todayStr()}.csv`);
+  const exp2 = () => { const rows = [['班級', '座號', '姓名', '日期', '類別', '單元', '活動', '原始數值', '單位', '等級', '分數', '缺席', '備註']]; const nm = new Map(A.students.map(s => [s.no, s.name]));
+    for (const s of A.students) for (const a of A.actList) for (const r of (s.list.get(a.id) || [])) rows.push([A.cls, s.no, s.name, r.date, a.cat, a.unit, a.name, r.value ?? '', a.mode === 'level' ? '' : a.uom, r.grade ? LV[r.grade] : '', r.grade ? scoreOf(a, r.grade) : '', r.absent ? '缺席' : '', r.note]); csvDownload(rows, `成績明細_${A.cls}_${todayStr()}.csv`); };
+  return [
+    h('div', { class: 'filters noprint', style: 'margin-bottom:10px' }, h('button', { class: 'primary', onclick: exp1 }, '⬇ 匯出成績單 CSV'), h('button', { onclick: exp2 }, '⬇ 匯出每筆明細 CSV'), h('button', { onclick: () => window.print() }, '🖨 列印')),
+    h('div', { class: 'panel' }, h('h2', null, `${A.cls} 體育學期成績單`, h('small', null, `${range}・${st.mode === 'cat' ? '總分＝各類別平均再平均' : '總分＝各活動平均'}`)),
+      h('div', { class: 'wrap' }, h('table', null, h('thead', null, h('tr', null, h('th', { class: 'l s1' }, '座號 姓名'), A.cats.map(c => h('th', null, c)), h('th', null, '總分'), h('th', null, '缺席'), h('th', { class: 'l' }, '備註'))),
+        h('tbody', null, A.students.map(s => h('tr', null, h('td', { class: 's1' }, `${s.no} ${s.name}`), A.cats.map(c => h('td', null, f1(s.catScore.get(c)))), h('td', null, h('b', null, f1(s.total))), h('td', null, s.abs || ''),
+          h('td', { class: 'l note', style: 'max-width:260px' }, s.notes.map(n => `${md(n.date)} ${n.act.name}：${n.note}`).join('；')))),
+          h('tr', null, h('td', { class: 's1' }, h('b', null, '全班平均')), A.cats.map(c => h('td', null, h('b', null, f1(A.byCat.find(x => x.cat === c).avg)))), h('td', null, h('b', null, f1(A.avg))), h('td'), h('td'))))),
+      h('p', { class: 'note' }, '成績＝各活動「最近一次出席」的等級換算分數（優／達成／接近／需加油，預設 100／93／89／85，每個活動可在 Sheet「活動設定」的 優分～加油分欄自訂）；缺席不計分。'))
+  ];
+}
+
+/* 學生詳情 */
+function openDrawer(no) {
+  const A = analyze(st.cls), s = A.students.find(x => x.no === no); if (!s) return;
+  const d = $('#drawer');
+  const bycat = A.cats.map(c => ({ c, items: A.actList.filter(a => a.cat === c) }));
+  d.replaceChildren(
+    h('div', { style: 'display:flex;align-items:center;gap:8px' }, h('h2', { style: 'flex:1;margin:0' }, `${s.no} 號 ${s.name}${s.star ? ' ⭐' : ''}`), h('button', { onclick: () => d.classList.remove('open'), 'aria-label': '關閉' }, '✕')),
+    h('div', { class: 'chips', style: 'margin:8px 0' }, h('span', { class: 'pill' }, st.cls), h('span', { class: 'sc ' + band(s.total) }, `總分 ${f1(s.total)}`), h('span', { class: 'pill' }, `${s.n} 個活動`), s.reasons.map(r => h('span', { class: 'pill bad' }, r)), s.watch.map(r => h('span', { class: 'pill warn' }, r)), (!s.flag && !s.watch.length && s.n) ? h('span', { class: 'pill good' }, '表現穩定') : null),
+    h('div', { style: 'text-align:center' }, radar(A.cats, A.cats.map(c => s.catScore.get(c)))),
+    ...bycat.map(({ c, items }) => h('div', null, h('h3', { style: 'margin:12px 0 2px;font-size:1rem' }, c, ' ', sc(s.catScore.get(c))),
+      items.map(a => { const cell = s.cell.get(a.id), l = s.list.get(a.id) || [];
+        const tr = cell && cell.att.length >= 2 ? (() => { const g = cell.att.map(r => r.grade), dt = g[g.length - 1] - g[0]; return h('span', { class: dt > 0 ? 'up' : dt < 0 ? 'down' : 'flat' }, dt > 0 ? `↗ 進步 ${g.join('→')}` : dt < 0 ? `↘ 退步 ${g.join('→')}` : `→ 持平 ${g.join('→')}`); })() : null;
+        return h('div', { class: 'dact' }, h('div', { class: 'hd' }, `${a.icon} ${a.name}`, cell ? sc(cell.score, ` ${LV[cell.grade]}`) : h('span', { class: 'pill' }, l.length ? '僅缺席' : '未登記'), tr),
+          l.length ? h('div', { class: 'chips', style: 'margin-top:4px' }, l.map(r => h('span', { class: 'pill ' + (r.absent ? '' : 'g' + r.grade), title: r.note || '' }, md(r.date), ' ', r.absent ? '缺席' : `${r.value ?? ''}${a.mode === 'checklist' ? '項' : a.uom || ''} ${LV[r.grade]} ${scoreOf(a, r.grade)}`, r.note ? ' 📝' : ''))) : null,
+          l.filter(r => r.note).map(r => h('div', { class: 'note' }, `${md(r.date)} 備註：${r.note}`)), s.pend.some(p => p.act.id === a.id) ? h('div', { class: 'pill warn', style: 'margin-top:4px' }, '缺席待補測') : null); }))));
+  d.classList.add('open');
+}
+
+/* ════════ 繪製 ════════ */
+function render() {
+  if (!S.classOrder.includes(st.cls)) st.cls = S.classOrder[0] || '';
+  clsSelect(); $('#fFrom').value = st.from; $('#fTo').value = st.to; $('#fMode').value = st.mode; $('#stamp').textContent = S.at ? `更新 ${S.at}` : '';
+  $('#fCls').closest('.filters').querySelector('#fCls').style.display = st.tab === 'home' ? 'none' : '';
+  document.querySelectorAll('#tabs button').forEach(b => b.classList.toggle('on', b.dataset.tab === st.tab));
+  const v = { home: viewHome, cls: viewCls, stu: viewStu, todo: viewTodo, report: viewReport }[st.tab];
+  $('#main').replaceChildren(...[v()].flat().filter(Boolean));
+}
+$('#tabs').addEventListener('click', e => { const b = e.target.closest('button'); if (b) { $('#drawer').classList.remove('open'); go(b.dataset.tab); } });
+$('#fCls').addEventListener('change', e => { st.cls = e.target.value; saveSt(); render(); });
+$('#fFrom').addEventListener('change', e => { st.from = e.target.value; saveSt(); render(); });
+$('#fTo').addEventListener('change', e => { st.to = e.target.value; saveSt(); render(); });
+$('#fMode').addEventListener('change', e => { st.mode = e.target.value; saveSt(); render(); });
+$('#btnRefresh').addEventListener('click', () => load(true));
+document.addEventListener('keydown', e => { if (e.key === 'Escape') $('#drawer').classList.remove('open'); });
+
+(function init() {
+  const c = lsGet(LS.cache, null);
+  if (c && c.cfg) { apply({ cfg: c.cfg, classes: c.classes, classOrder: c.classOrder, scores: c.scores }); S.at = '本機快取'; }
+  render(); load();
+})();
+window.__admin = { S, st, analyze, render, go };
+})();
+</script>
+</body>
+</html>

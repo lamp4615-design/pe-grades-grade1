@@ -33,7 +33,7 @@ const rec = (o) => Object.assign({ date: today, cls: '101', no: 1, aid: 'ROPE02'
   gas.ctx.setup();
   eq([...gas.sheets.keys()], ['班級名單', '活動設定', '成績', '單元一覽'], 'setup() 建立四個分頁');
   const actRows = gas.sheets.get('活動設定').rows;
-  eq(actRows[0], ['活動ID', '類別', '單元', '活動名稱', '圖示', '登記方式', '單位', '評分方向', '目標說明', '勾選項目', '優(4)', '達成(3)', '接近(2)', '啟用', '來源'], '活動設定表頭正確');
+  eq(actRows[0], ['活動ID', '類別', '單元', '活動名稱', '圖示', '登記方式', '單位', '評分方向', '目標說明', '勾選項目', '優(4)', '達成(3)', '接近(2)', '啟用', '來源', '優分', '達成分', '接近分', '加油分'], '活動設定表頭正確（含 4 個分數欄）');
   eq(actRows.length - 1, 34, '預設活動共 34 筆（跑步6+跳繩3+球類8+平衡2+呼拉圈3+安全態度2+健康10）' );
   eq(gas.sheets.get('單元一覽').rows.length - 1, 20, '單元一覽 20 個單元（體育10＋健康10）');
   ok(/^\d{6}$/.test(gas.props.get('PASSCODE')), 'setup() 產生 6 碼通行碼');
@@ -113,6 +113,25 @@ const rec = (o) => Object.assign({ date: today, cls: '101', no: 1, aid: 'ROPE02'
   for (let i = 0; i < 10; i++) gas.post({ action: 'bootstrap', key: 'x' });
   ok(/過多/.test(gas.post({ action: 'bootstrap', key: KEY }).error), '連續猜錯 10 次後暫時鎖定');
 
+
+  // 分數量化：預設與逐活動自訂
+  gas = freshBackend();
+  gas.post({ action: 'save', key: KEY, records: [rec({ no: 1, value: 15 }), rec({ no: 2, value: 8 }), rec({ no: 3, value: 3 }), rec({ no: 4, value: 0 }), rec({ no: 5, absent: true })] });
+  const scS = gas.sheets.get('成績');
+  eq(scS.rows[0][12], '分數', '成績表有「分數」欄');
+  eq([1, 2, 3, 4, 5].map(i => scS.rows[i][12]), [100, 93, 89, 85, ''], '預設換算：優100／達成93／接近89／加油85；缺席無分數');
+  const aRow = gas.sheets.get('活動設定').rows.find(r => r[0] === 'ROPE02'); aRow[15] = 98; aRow[16] = 95;
+  gas.post({ action: 'save', key: KEY, records: [rec({ no: 6, value: 15 }), rec({ no: 7, value: 8 }), rec({ no: 8, value: 3 })] });
+  eq([6, 7, 8].map(i => scS.rows[scS.getLastRow() - 3 + (i - 6)][12]), [98, 95, 89], '該活動自訂優分98／達成分95，接近分留空沿用預設89');
+  eq(gas.post({ action: 'bootstrap', key: KEY }).cfg.activities.find(a => a.id === 'ROPE02').sc, [98, 95, 89, 85], 'bootstrap 帶出每個活動的四級分數');
+  // 舊版試算表（15 欄活動設定、12 欄成績）→ 只補表頭、不動資料
+  gas = build(); gas.ctx.setup();
+  const oldAct = gas.sheets.get('活動設定'); oldAct.rows = oldAct.rows.map(r => r.slice(0, 15)); oldAct.rows[3][3] = '老師改名';
+  const oldSc = gas.sheets.get('成績'); oldSc.rows = [oldSc.rows[0].slice(0, 12)];
+  gas.props.set('PASSCODE', KEY); gas.sheets.get('班級名單').rows = [['班級', '座號', '姓名'], ['101', 1, '舊版測試']];
+  r = gas.post({ action: 'save', key: KEY, records: [rec({ no: 1, value: 15 })] });
+  eq([r.ok, oldAct.rows[0].length, oldAct.rows[3][3], oldSc.rows[0][12], oldSc.rows[1][12]], [true, 19, '老師改名', '分數', 100], '舊版試算表第一次寫入時自動補欄位，原資料不動，分數照算');
+
   /* ═════ 二、前端 ═════ */
   console.log('\n【前端 index.html（jsdom）】');
   const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
@@ -171,7 +190,7 @@ const rec = (o) => Object.assign({ date: today, cls: '101', no: 1, aid: 'ROPE02'
   const t0 = Date.now();
   setNum(P.w, cards[0], '9');
   const tapMs = Date.now() - t0;
-  eq(cards[0].querySelector('.badge').textContent, '達成', '輸入 9 次 → 立即顯示「達成」（樂觀更新）');
+  eq(cards[0].querySelector('.badge').textContent.split(' ')[0], '達成', '輸入 9 次 → 立即顯示「達成」（樂觀更新）');
   ok(cards[0].className.includes('g3'), '卡片即時變色（g3）');
   eq(P.pe.S.queue.size, 1, '寫入進本機佇列，尚未等伺服器');
   eq(sheet().getLastRow() - 1, 0, '此時 Sheet 還沒有資料（批次延遲送出）');
@@ -193,7 +212,7 @@ const rec = (o) => Object.assign({ date: today, cls: '101', no: 1, aid: 'ROPE02'
   pick(P.w, P.d, '活動', 'ATT02');
   cards = $$(P.d, '.card');
   const star = cards[2].querySelectorAll('.lv button')[0];
-  star.click(); eq(cards[2].querySelector('.badge').textContent, '優', 'level：點🌟 → 優');
+  star.click(); eq(cards[2].querySelector('.badge').textContent.split(' ')[0], '優', 'level：點🌟 → 優');
   star.click(); eq(cards[2].querySelector('.badge').textContent, '—', 'level：再點一次取消');
   cards[3].querySelectorAll('.lv button')[1].click();
   await settle(P.pe);
@@ -205,10 +224,10 @@ const rec = (o) => Object.assign({ date: today, cls: '101', no: 1, aid: 'ROPE02'
   const ck = cards[4].querySelectorAll('.ck button');
   eq(ck.length, 4, 'checklist：4 顆大按鈕');
   ck[0].click(); ck[1].click(); ck[2].click();
-  eq(cards[4].querySelector('.badge').textContent, '達成', '勾 3 項 → 達成');
-  ck[3].click(); eq(cards[4].querySelector('.badge').textContent, '優', '勾滿 4 項 → 優');
+  eq(cards[4].querySelector('.badge').textContent.split(' ')[0], '達成', '勾 3 項 → 達成');
+  ck[3].click(); eq(cards[4].querySelector('.badge').textContent.split(' ')[0], '優', '勾滿 4 項 → 優');
   ck[3].click(); ck[2].click(); ck[1].click();
-  eq(cards[4].querySelector('.badge').textContent, '需加油', '只勾 1 項 → 需加油（等級 1）');
+  eq(cards[4].querySelector('.badge').textContent.split(' ')[0], '需加油', '只勾 1 項 → 需加油（等級 1）');
   cards[5].querySelector('.abs').click();
   ok(cards[5].className.includes('abs') && cards[5].querySelector('.badge').textContent === '缺席', '缺席開關');
   const noteIn = cards[6].querySelector('.noterow input'); cards[6].querySelector('.note').click(); noteIn.value = '腳扭傷'; fire(P.w, noteIn, 'change');
@@ -275,7 +294,7 @@ const rec = (o) => Object.assign({ date: today, cls: '101', no: 1, aid: 'ROPE02'
   await sleep(30); P.d.querySelector('#modal .primary').click(); await sleep(30);
   eq($$(P.d, '.card').filter(c => c.querySelector('.badge').textContent === '—').length, 0, '未登記全部設為達成：全班都有成績');
   eq($$(P.d, '.card')[30].querySelector('input[type=number]').value, '15', '設為達成＝「達成」門檻值（15）');
-  setNum(P.w, $$(P.d, '.card')[30], '3'); eq($$(P.d, '.card')[30].querySelector('.badge').textContent, '需加油', '再逐一改例外（3 次→需加油）');
+  setNum(P.w, $$(P.d, '.card')[30], '3'); eq($$(P.d, '.card')[30].querySelector('.badge').textContent.split(' ')[0], '需加油', '再逐一改例外（3 次→需加油）');
   await settle(P.pe);
   $$(P.d, '#tools button').find(b => b.textContent === '清除本次').click();
   await sleep(30); P.d.querySelector('#modal .danger').click(); await sleep(30);
@@ -369,6 +388,8 @@ const rec = (o) => Object.assign({ date: today, cls: '101', no: 1, aid: 'ROPE02'
     n++; if (P.pe.gradeOf(a, v) !== gas.ctx.gradeOf_(a, v)) mism++;
   }
   eq(mism, 0, `前後端 gradeOf 在 ${n} 組輸入完全一致`);
+
+  await require('./admin.test.js')({ ok, eq, sleep, KEY });
 
   console.log(`\n結果：${pass} 通過、${fail} 失敗`);
   process.exit(fail ? 1 : 0);

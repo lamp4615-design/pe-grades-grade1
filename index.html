@@ -201,9 +201,9 @@ table.heat{border-collapse:separate;border-spacing:0;font-size:.9rem}
  * 這是網址而非機密；真正的保護是「教師通行碼」。請勿把學生名單提交進 GitHub。 */
 const DEFAULT_API = 'https://script.google.com/macros/s/AKfycbwJqsm_tSxg2t7Tgl6D5l-WkCCS4rmNck-rxWQP-AC64rc6OxrfHxm3cIdDqEsTbos-/exec';
 
-/* 等級換算成績（落在 85–100 分）：優=100、達成=93、接近=89、需加油=85。缺席不計。可直接改這裡的數字。 */
+/* 等級換算成績：每個活動的分數寫在 Sheet「活動設定」的 優分／達成分／接近分／加油分（留空＝預設 100／93／89／85，皆落在 85–100）。缺席不計。 */
 const SCORE_MAP = { 4: 100, 3: 93, 2: 89, 1: 85 };
-const scoreOf = g => (g ? SCORE_MAP[g] : null);
+const scoreOf = (act, g) => (g ? (act && act.sc ? act.sc[4 - g] : SCORE_MAP[g]) : null);
 const fmtScore = n => (n == null ? '–' : String(Math.round(n * 10) / 10));
 
 const LS = { auth: 'pe1.auth', cache: 'pe1.cache', queue: 'pe1.queue', ui: 'pe1.ui' };
@@ -419,6 +419,7 @@ function showMenu() {
   modal(close => [h('h2', null, '設定'),
     h('div', { style: 'display:flex;flex-direction:column;gap:8px' },
       h('button', { onclick: () => { close(); bootstrap(true); } }, '↻ 重新載入名單、活動與成績'),
+      h('button', { onclick: () => { location.href = 'admin.html'; } }, '📊 教師後台（全班成績分析）'),
       h('button', { onclick: () => { close(); showLogin(); } }, '🔑 更換網址／通行碼'),
       h('button', { class: 'danger', onclick: async () => {
         close();
@@ -550,7 +551,7 @@ function buildCard(stu, act, ctx) {
   el.refresh = () => {
     const r = get(), g = r && !r.absent ? r.grade : null;
     el.className = 'card' + (r && r.absent ? ' abs' : g ? ' g' + g : '');
-    badge.className = 'badge' + (g ? ' g' + g : ''); badge.textContent = r && r.absent ? '缺席' : g ? LV[g].t : '—';
+    badge.className = 'badge' + (g ? ' g' + g : ''); badge.textContent = r && r.absent ? '缺席' : g ? `${LV[g].t} ${scoreOf(act, g)}` : '—';
     bAbs.classList.toggle('on', !!(r && r.absent)); bClr.hidden = !r;
     bNote.classList.toggle('has', !!(r && r.note)); if (document.activeElement !== noteIn) noteIn.value = r ? r.note : '';
     if (r && r.note && noteRow.hidden) noteRow.hidden = false;
@@ -650,13 +651,14 @@ function ovCompute() {
   const colCats = []; for (const a of cols) if (!colCats.includes(a.cat)) colCats.push(a.cat);
   colCats.sort((x, y) => S.cfg.categories.indexOf(x) - S.cfg.categories.indexOf(y));
   const ordered = colCats.flatMap(c => cols.filter(a => a.cat === c));
+  const D_acts = ordered;
   const rows = list.map(([no, name]) => {
     const m = latest.get(no) || new Map();
     const gs = ordered.map(a => m.has(a.id) ? m.get(a.id).grade : null);
     const all = gs.filter(g => g != null);
     const catAvg = colCats.map(c => mean(ordered.map((a, i) => a.cat === c ? gs[i] : null).filter(g => g != null)));
-    const score = mean(all.map(scoreOf)), avg = mean(all), ones = all.filter(g => g === 1).length;
-    return { no, name, gs, catAvg, avg, score, ones, flag: all.length > 0 && (avg < 2 || ones >= 2), abs: absOnly.get(no) || new Set() };
+    const ss = gs.map((g, i) => g == null ? null : scoreOf(D_acts[i], g)), score = mean(ss.filter(v => v != null)), avg = mean(all), ones = all.filter(g => g === 1).length;
+    return { no, name, gs, ss, catAvg, avg, score, ones, flag: all.length > 0 && (avg < 2 || ones >= 2), abs: absOnly.get(no) || new Set() };
   });
   return { list, acts, ordered, colCats, rows, touched };
 }
@@ -685,7 +687,7 @@ function renderOverview() {
     return h('div', { class: 'rate', title: `${a.name}：${ok}/${gs.length}` }, h('span', { class: 'nm' }, `${a.icon} ${a.name}`), h('b', null, gs.length ? p + '%' : '–'),
       h('div', { class: 'bar2' }, h('i', { style: `width:${p}%` })));
   });
-  const p1 = h('div', { class: 'panel' }, h('h3', null, `全班狀況　平均等級 ${fmt1(avgAll)}　平均成績 ${fmtScore(mean(cells.map(scoreOf)))} 分（共 ${tot} 筆）`),
+  const p1 = h('div', { class: 'panel' }, h('h3', null, `全班狀況　平均等級 ${fmt1(avgAll)}　平均成績 ${fmtScore(mean(D.rows.flatMap(r => r.ss.filter(v => v != null))))} 分（共 ${tot} 筆）`),
     tot ? dist : h('div', { class: 'empty', style: 'padding:12px' }, '這個篩選條件下還沒有成績'),
     D.ordered.length ? [h('h3', { style: 'margin:12px 0 0' }, '各活動達成率（等級 ≥ 3）'), h('div', { class: 'rates' }, rates)] : null);
 
@@ -743,7 +745,7 @@ function exportCsv() {
   for (const r of recs) {
     const a = actById(r.aid);
     if (o.cat && a.cat !== o.cat) continue;
-    rows.push([r.cls, r.no, nm.get(r.no) || '', r.date, a.cat, a.unit, a.name, r.value ?? '', a.mode === 'level' ? '' : a.uom, r.grade ?? '', scoreOf(r.grade) ?? '', r.absent ? '缺席' : '', r.note]);
+    rows.push([r.cls, r.no, nm.get(r.no) || '', r.date, a.cat, a.unit, a.name, r.value ?? '', a.mode === 'level' ? '' : a.uom, r.grade ?? '', scoreOf(a, r.grade) ?? '', r.absent ? '缺席' : '', r.note]);
   }
   const csv = '﻿' + rows.map(r => r.map(v => { v = String(v ?? ''); return /[",\n\r]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; }).join(',')).join('\r\n');
   const a = h('a', { href: URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' })), download: `體育成績_${ui.cls}_${todayStr()}.csv` });
@@ -757,10 +759,11 @@ function openDrawer(no) {
   const byAct = new Map(); for (const r of recs) { if (!byAct.has(r.aid)) byAct.set(r.aid, []); byAct.get(r.aid).push(r); }
   const acts = [...byAct.keys()].map(actById).sort((a, b) => S.cfg.categories.indexOf(a.cat) - S.cfg.categories.indexOf(b.cat));
   const lastGs = acts.map(a => { const g = byAct.get(a.id).filter(r => r.grade != null); return g.length ? g[g.length - 1].grade : null; }).filter(g => g != null);
+  const lastScores = acts.map(a => { const g = byAct.get(a.id).filter(r => r.grade != null); return g.length ? scoreOf(a, g[g.length - 1].grade) : null; }).filter(v => v != null);
   const d = $('#drawer');
   d.replaceChildren(
     h('div', { style: 'display:flex;align-items:center;gap:8px' }, h('h2', { style: 'flex:1' }, `${no} 號 ${nm[1]}`), h('button', { onclick: () => d.classList.remove('open'), 'aria-label': '關閉' }, '✕')),
-    h('div', { class: 'legend' }, h('span', { class: 'pill' }, `${ui.cls}`), h('span', { class: 'pill' }, `平均等級 ${fmt1(mean(lastGs))}`), h('span', { class: 'pill g4' }, `成績 ${fmtScore(mean(lastGs.map(scoreOf)))} 分`), h('span', { class: 'pill' }, `${acts.length} 個活動`)),
+    h('div', { class: 'legend' }, h('span', { class: 'pill' }, `${ui.cls}`), h('span', { class: 'pill' }, `平均等級 ${fmt1(mean(lastGs))}`), h('span', { class: 'pill g4' }, `成績 ${fmtScore(mean(lastScores))} 分`), h('span', { class: 'pill' }, `${acts.length} 個活動`)),
     ...(acts.length ? acts.map(a => {
       const rs = byAct.get(a.id), gs = rs.filter(r => r.grade != null).map(r => r.grade);
       let tr = null;
@@ -798,7 +801,7 @@ document.addEventListener('keydown', e => { if (e.key === 'Escape') $('#drawer')
   if (S.queue.size) scheduleFlush(1500);
 })();
 
-window.__pe = { S, ui, flush, bootstrap, gradeOf, SCORE_MAP };      // 供除錯與自動測試
+window.__pe = { S, ui, flush, bootstrap, gradeOf, SCORE_MAP, scoreOf };      // 供除錯與自動測試
 })();
 </script>
 </body>
